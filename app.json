@@ -45,7 +45,9 @@
         {
           "cameraPermission": "Permite acceder a la cámara para escanear el código QR de las paradas."
         }
-      ]
+      ],
+      "expo-secure-store",
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true
