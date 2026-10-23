@@ -31,6 +31,8 @@ export default function LoginScreen() {
 
       console.log(result);
 
+      console.log('Login correcto', result);
+
       Alert.alert(
         'Éxito',
         'Inicio de sesión correcto'
