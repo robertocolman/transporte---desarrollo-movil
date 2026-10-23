@@ -16,6 +16,18 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen
+          name="(auth)/login"
+          options={{
+            title: 'Iniciar Sesión',
+          }}
+        />
+        <Stack.Screen
+          name="(auth)/register"
+          options={{
+            title: 'Registro',
+          }}
+        />
+        <Stack.Screen
           name="index"
           options={{
             title: 'Transporte Paraná',
