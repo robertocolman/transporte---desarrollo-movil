@@ -5,6 +5,7 @@ import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useTheme } from '@/hooks/use-theme';
 import { ParadaConDistancia } from '@/services/stopsService';
 import { ThemedText } from './ThemedText';
+import { EstrellaFavoritoParada } from './EstrellaFavoritoParada';
 
 interface StopCardProps {
   parada: ParadaConDistancia;
@@ -70,9 +71,15 @@ export function StopCard({ parada }: StopCardProps) {
           </View>
         </View>
 
+        <View style={styles.rightContainer}>
         {formattedDistance && (
-          <View style={[styles.distanceBadge, { backgroundColor: `${paleta.primary}15` }]}>
-            <Ionicons name="location-sharp" size={14} color={paleta.primary} />
+          <View
+            style={[
+              styles.distanceBadge,
+              { backgroundColor: `${paleta.primary}15` },
+            ]}
+          >
+          <Ionicons name="location-sharp" size={14} color={paleta.primary} />
             <ThemedText
               variant="bold"
               color={paleta.primary}
@@ -82,6 +89,11 @@ export function StopCard({ parada }: StopCardProps) {
             </ThemedText>
           </View>
         )}
+
+        <View style={styles.starContainer}>
+          <EstrellaFavoritoParada paradaId={parada.id} />
+        </View>
+      </View>
       </View>
 
       <View style={styles.bottomRow}>
@@ -191,5 +203,14 @@ const styles = StyleSheet.create({
   arrowRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  rightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+
+  starContainer: {
+    padding: 4,
   },
 });

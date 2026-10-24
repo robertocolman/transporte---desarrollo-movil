@@ -21,6 +21,7 @@ import { Linea, Parada } from '@/types';
 import { ThemedText } from '@/components/ThemedText';
 import { Button } from '@/components/Button';
 import { CompassArrow } from '@/components/CompassArrow';
+import { EstrellaFavoritoParada } from '@/components/EstrellaFavoritoParada';
 
 export default function ParadaDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -129,10 +130,17 @@ export default function ParadaDetailScreen() {
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
             <ThemedText variant="title">{parada.nombre}</ThemedText>
-            <ThemedText variant="caption" color={paleta.textMuted} style={{ marginTop: 2 }}>
+
+            <ThemedText
+              variant="caption"
+              color={paleta.textMuted}
+              style={{ marginTop: 2 }}
+            >
               ID: {parada.id} · Sentido: {parada.sentido.toUpperCase()}
             </ThemedText>
           </View>
+
+          <EstrellaFavoritoParada paradaId={parada.id} />
         </View>
 
         {/* Garita y Código QR */}

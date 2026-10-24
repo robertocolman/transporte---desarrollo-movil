@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { authService } from '@/services/authService';
 import { useTheme } from '@/hooks/use-theme';
 import { API_URL } from '@/config/api';
+import { stopsService } from '@/services/stopsService';
 
 type Usuario = {
   nombre?: string;
@@ -27,6 +28,7 @@ export default function PerfilScreen() {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [cargando, setCargando] = useState(true);
   const [favoritosAbiertos, setFavoritosAbiertos] = useState(false);
+  const [nombresParadas, setNombresParadas] = useState<Record<string, string>>({});
 
   // Comprobar la sesión cada vez que entramos a "Yo"
   useFocusEffect(
@@ -46,9 +48,24 @@ export default function PerfilScreen() {
 
           const respuesta = await authService.getCurrentUser();
 
-          if (activo) {
+            if (activo) {
             setUsuario(respuesta.datos);
-          }
+            }
+
+            const idsParadas = respuesta.datos.paradasFavoritas ?? [];
+
+            const resultados = await Promise.all(
+            idsParadas.map(async (id: string) => {
+                const parada = await stopsService.getStopById(id);
+
+                return [id, parada?.nombre ?? `Parada ${id.replace(/^par-/, '')}`] as const;
+            })
+            );
+
+            if (activo) {
+            setNombresParadas(Object.fromEntries(resultados));
+            }
+          
         } catch (error) {
           console.error('Error al consultar la sesión:', error);
 
@@ -315,7 +332,7 @@ export default function PerfilScreen() {
                         style={styles.favorito}
                     >
                         <Text style={{ color: paleta.text, flex: 1, fontWeight: '500' }}>
-                            {`Parada ${paradaId.replace(/^par-/, '')}`}
+                            {nombresParadas[paradaId] ?? `Parada ${paradaId.replace(/^par-/, '')}`}
                         </Text>
 
                         <Pressable
