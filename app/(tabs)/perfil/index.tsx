@@ -10,13 +10,15 @@ import {
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-
 import { authService } from '@/services/authService';
 import { useTheme } from '@/hooks/use-theme';
+import { API_URL } from '@/config/api';
 
 type Usuario = {
   nombre?: string;
   email?: string;
+  lineasFavoritas?: string[];
+  paradasFavoritas?: string[];
 };
 
 export default function PerfilScreen() {
@@ -210,12 +212,132 @@ export default function PerfilScreen() {
           },
         ]}
       >
-        <Opcion
-          icono="star-outline"
-          titulo="Mis favoritos"
-          color={paleta.text}
-          detalle="Líneas y paradas guardadas"
+        {/* Favoritos desplegables */}
+        <Pressable
+        style={styles.opcion}
+        onPress={() => setFavoritosAbiertos(!favoritosAbiertos)}
+        >
+        <Ionicons
+            name="star-outline"
+            size={23}
+            color={paleta.text}
         />
+
+        <View style={{ flex: 1 }}>
+            <Text
+            style={{
+                color: paleta.text,
+                fontSize: 15,
+                fontWeight: '600',
+            }}
+            >
+            Mis favoritos
+            </Text>
+
+            <Text
+            style={{
+                color: paleta.textMuted,
+                fontSize: 12,
+            }}
+            >
+            Líneas y paradas guardadas
+            </Text>
+        </View>
+
+        <Ionicons
+            name={favoritosAbiertos ? 'chevron-up' : 'chevron-down'}
+            size={20}
+            color={paleta.textMuted}
+        />
+        </Pressable>
+
+        {favoritosAbiertos && (
+        <View style={styles.contenidoFavoritos}>
+            <View style={styles.subtituloFavoritos}>
+            <Ionicons
+                name="bus-outline"
+                size={20}
+                color={paleta.primary}
+            />
+
+            <Text style={{ color: paleta.text, fontWeight: '600' }}>
+                Líneas favoritas
+            </Text>
+            </View>
+
+            <View style={{ marginBottom: 18 }}>
+                {usuario.lineasFavoritas?.length ? (
+                    usuario.lineasFavoritas.map((lineaId) => (
+                    <View
+                        key={lineaId}
+                        style={styles.favorito}
+                    >
+                        <Text style={{ color: paleta.text, flex: 1, fontWeight: '500' }}>
+                            {`Línea ${lineaId.replace(/^lin-/, '')}`}
+                        </Text>
+
+                        <Pressable
+                            onPress={() => quitarLineaFavorita(lineaId)}
+                            hitSlop={10}
+                        >
+                            <Ionicons
+                                name="star"
+                                size={16}
+                                color={paleta.accent}
+                            />
+                        </Pressable>
+                    </View>
+                    ))
+                ) : (
+                    <Text style={{ color: paleta.textMuted }}>
+                    Todavía no tenés líneas favoritas.
+                    </Text>
+                )}
+                </View>
+
+            <View style={styles.subtituloFavoritos}>
+            <Ionicons
+                name="location-outline"
+                size={20}
+                color={paleta.primary}
+            />
+
+            <Text style={{ color: paleta.text, fontWeight: '600' }}>
+                Paradas favoritas
+            </Text>
+            </View>
+
+            <View>
+                {usuario.paradasFavoritas?.length ? (
+                    usuario.paradasFavoritas.map((paradaId) => (
+                    <View
+                        key={paradaId}
+                        style={styles.favorito}
+                    >
+                        <Text style={{ color: paleta.text, flex: 1, fontWeight: '500' }}>
+                            {`Parada ${paradaId.replace(/^par-/, '')}`}
+                        </Text>
+
+                        <Pressable
+                            onPress={() => quitarParadaFavorita(paradaId)}
+                            hitSlop={10}
+                        >
+                            <Ionicons
+                                name="star"
+                                size={16}
+                                color={paleta.accent}
+                            />
+                        </Pressable>
+                    </View>
+                    ))
+                ) : (
+                    <Text style={{ color: paleta.textMuted }}>
+                    Todavía no tenés paradas favoritas.
+                    </Text>
+                )}
+            </View>
+        </View>
+        )}
 
         <Opcion
           icono="notifications-outline"
@@ -250,8 +372,92 @@ export default function PerfilScreen() {
       </Pressable>
     </ScrollView>
   );
-}
 
+    function quitarParadaFavorita(paradaId: string) {
+    Alert.alert(
+        'Quitar de favoritos',
+        '¿Querés quitar esta parada de tus favoritos?',
+        [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+            text: 'Quitar',
+            style: 'destructive',
+            onPress: async () => {
+            try {
+                const token = await authService.getToken();
+
+                if (!token) {
+                Alert.alert('Error', 'Tenés que iniciar sesión.');
+                return;
+                }
+
+                const respuesta = await fetch(
+                `${API_URL}/yo/paradas-favoritas/${encodeURIComponent(paradaId)}`,
+                {
+                    method: 'DELETE',
+                    headers: {
+                    Authorization: `Bearer ${token}`,
+                    },
+                }
+                );
+
+                if (!respuesta.ok) {
+                throw new Error('No se pudo quitar la parada.');
+                }
+
+                const usuarioActualizado = await authService.getCurrentUser();
+                setUsuario(usuarioActualizado.datos);
+            } catch (error) {
+                Alert.alert('Error', 'No se pudo quitar la parada de favoritos.');
+            }
+            },
+        },
+        ]
+    );
+    }
+    function quitarLineaFavorita(lineaId: string) {
+        Alert.alert(
+            'Quitar de favoritos',
+            '¿Querés quitar esta línea de tus favoritos?',
+            [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+                text: 'Quitar',
+                style: 'destructive',
+                onPress: async () => {
+                try {
+                    const token = await authService.getToken();
+
+                    if (!token) {
+                    Alert.alert('Error', 'Tenés que iniciar sesión.');
+                    return;
+                    }
+
+                    const respuesta = await fetch(
+                    `${API_URL}/yo/lineas-favoritas/${encodeURIComponent(lineaId)}`,
+                    {
+                        method: 'DELETE',
+                        headers: {
+                        Authorization: `Bearer ${token}`,
+                        },
+                    }
+                    );
+
+                    if (!respuesta.ok) {
+                    throw new Error('No se pudo quitar la línea.');
+                    }
+
+                    const usuarioActualizado = await authService.getCurrentUser();
+                    setUsuario(usuarioActualizado.datos);
+                } catch (error) {
+                    Alert.alert('Error', 'No se pudo quitar la línea de favoritos.');
+                }
+                },
+            },
+            ]
+        );
+    }
+}
 // Componente visual reutilizable para las opciones
 function Opcion({
   icono,
@@ -370,5 +576,27 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 15,
     marginTop: 32,
+  },
+  contenidoFavoritos: {
+    paddingLeft: 37,
+    paddingRight: 10,
+    paddingBottom: 20,
+  },
+
+  subtituloFavoritos: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+
+  favorito: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingLeft: 12,
+    paddingRight: 8,
+    gap: 10,
   },
 });
