@@ -42,7 +42,7 @@ export const authService = {
         },
         body: JSON.stringify({
           email,
-          password,
+          contrasena: password,
         }),
       }
     );
@@ -79,7 +79,7 @@ export const authService = {
         body: JSON.stringify({
           nombre,
           email,
-          password,
+          contrasena: password,
         }),
       }
     );
@@ -92,6 +92,11 @@ export const authService = {
         'Error al registrar usuario'
       );
     }
+
+    if (data.datos?.token) {
+      await authService.saveToken(data.datos.token);
+    }
+
     return data;
   },
   

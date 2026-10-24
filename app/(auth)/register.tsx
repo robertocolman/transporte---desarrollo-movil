@@ -4,6 +4,9 @@ import {
   TextInput,
   StyleSheet,
   Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/ThemedText';
@@ -37,7 +40,7 @@ export default function RegisterScreen() {
         'Usuario registrado correctamente'
       );
       
-      router.replace('/(auth)/login');
+      router.replace('/(tabs)/perfil');
 
     } catch (error: any) {
       Alert.alert(
@@ -50,82 +53,89 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: paleta.background }
-      ]}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ThemedText
-        variant="title"
-        style={styles.title}
+      <ScrollView
+        style={{ backgroundColor: paleta.background }}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
       >
-        Crear Cuenta
-      </ThemedText>
+        <ThemedText
+          variant="title"
+          style={styles.title}
+        >
+          Crear Cuenta
+        </ThemedText>
 
-      <TextInput
-        placeholder="Nombre"
-        value={nombre}
-        onChangeText={setNombre}
-        style={[
-          styles.input,
-          {
-            backgroundColor: paleta.surface,
-            color: paleta.text,
-            borderColor: paleta.border,
-          },
-        ]}
-      />
+        <TextInput
+          placeholder="Nombre"
+          placeholderTextColor={paleta.textMuted}
+          value={nombre}
+          onChangeText={setNombre}
+          style={[
+            styles.input,
+            {
+              backgroundColor: paleta.surface,
+              color: paleta.text,
+              borderColor: paleta.border,
+            },
+          ]}
+        />
 
-      <TextInput
-        placeholder="Email"
-        autoCapitalize="none"
-        value={email}
-        onChangeText={setEmail}
-        style={[
-          styles.input,
-          {
-            backgroundColor: paleta.surface,
-            color: paleta.text,
-            borderColor: paleta.border,
-          },
-        ]}
-      />
+        <TextInput
+          placeholder="Email"
+          placeholderTextColor={paleta.textMuted}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+          style={[
+            styles.input,
+            {
+              backgroundColor: paleta.surface,
+              color: paleta.text,
+              borderColor: paleta.border,
+            },
+          ]}
+        />
 
-      <TextInput
-        placeholder="Contraseña"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-        style={[
-          styles.input,
-          {
-            backgroundColor: paleta.surface,
-            color: paleta.text,
-            borderColor: paleta.border,
-          },
-        ]}
-      />
+        <TextInput
+          placeholder="Contraseña"
+          placeholderTextColor={paleta.textMuted}
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+          style={[
+            styles.input,
+            {
+              backgroundColor: paleta.surface,
+              color: paleta.text,
+              borderColor: paleta.border,
+            },
+          ]}
+        />
 
-      <Button
-        title="Registrarme"
-        onPress={handleRegister}
-        isLoading={loading}
-      />
-      <Button
-        title="Volver al login"
-        variant="outline"
-        onPress={() => {
-            router.back();
-        }}
-      />
-    </View>
+        <Button
+          title="Registrarme"
+          onPress={handleRegister}
+          isLoading={loading}
+        />
+
+        <Button
+          title="Volver al login"
+          variant="outline"
+          onPress={() => router.back()}
+        />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     padding: 24,
     justifyContent: 'center',
   },

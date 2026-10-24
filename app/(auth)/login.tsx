@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import {
-  View,
   TextInput,
   StyleSheet,
   Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/ThemedText';
@@ -24,19 +26,10 @@ export default function LoginScreen() {
     try {
       setLoading(true);
 
-      const result = await authService.login(
-        email,
-        password
-      );
+      await authService.login(email, password);
 
-      console.log(result);
+      router.replace('/(tabs)/perfil');
 
-      console.log('Login correcto', result);
-
-      Alert.alert(
-        'Éxito',
-        'Inicio de sesión correcto'
-      );
     } catch (error: any) {
       Alert.alert(
         'Error',
@@ -49,66 +42,73 @@ export default function LoginScreen() {
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: paleta.background }
-      ]}
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: paleta.background }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ThemedText
-        variant="title"
-        style={styles.title}
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
       >
-        Iniciar Sesión
-      </ThemedText>
+        <ThemedText
+          variant="title"
+          style={styles.title}
+        >
+          Iniciar Sesión
+        </ThemedText>
 
-      <TextInput
-        placeholder="Email"
-        autoCapitalize="none"
-        value={email}
-        onChangeText={setEmail}
-        style={[
-          styles.input,
-          {
-            backgroundColor: paleta.surface,
-            color: paleta.text,
-            borderColor: paleta.border,
-          },
-        ]}
-      />
-      <TextInput
-        placeholder="Contraseña"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-        style={[
-          styles.input,
-          {
-            backgroundColor: paleta.surface,
-            color: paleta.text,
-            borderColor: paleta.border,
-          },
-        ]}
-      />
-      <Button
-        title="Ingresar"
-        onPress={handleLogin}
-        isLoading={loading}
-      />
-      <Button
-        title="Crear cuenta"
-        variant="outline"
-        onPress={() => {
-            router.push('/register');
-        }}
-      />
-    </View>
+        <TextInput
+          placeholder="Email"
+          placeholderTextColor={paleta.textMuted}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+          style={[
+            styles.input,
+            {
+              backgroundColor: paleta.surface,
+              color: paleta.text,
+              borderColor: paleta.border,
+            },
+          ]}
+        />
+
+        <TextInput
+          placeholder="Contraseña"
+          placeholderTextColor={paleta.textMuted}
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+          style={[
+            styles.input,
+            {
+              backgroundColor: paleta.surface,
+              color: paleta.text,
+              borderColor: paleta.border,
+            },
+          ]}
+        />
+
+        <Button
+          title="Ingresar"
+          onPress={handleLogin}
+          isLoading={loading}
+        />
+
+        <Button
+          title="Crear cuenta"
+          variant="outline"
+          onPress={() => router.push('/register')}
+        />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     padding: 24,
     justifyContent: 'center',
   },

@@ -1,37 +1,49 @@
 export const darkColors = {
-  background: '#0d131f',
-  surface: '#162032',
-  surfaceHighlight: '#1f2d47',
-  text: '#f1f5f9',
-  textMuted: '#94a3b8',
-  accent: '#38bdf8', // Celeste / Azul río Paraná
-  accentMuted: '#0284c7',
-  primary: '#0ea5e9',
-  onPrimary: '#ffffff',
-  border: '#27354f',
-  success: '#10b981',
-  warning: '#f59e0b',
-  danger: '#ef4444',
-  card: '#162032',
+  background: '#0D1729',
+  surface: '#14243D',
+  surfaceHighlight: '#1D3552',
+
+  text: '#F1F5F9',
+  textMuted: '#A7B8C9',
+
+  accent: '#19B58B',
+  accentMuted: '#087F69',
+
+  primary: '#087DB4',
+  onPrimary: '#FFFFFF',
+
+  border: '#2A4059',
+
+  success: '#19B58B',
+  warning: '#F59E0B',
+  danger: '#EF4444',
+
+  card: '#14243D',
 };
 
 export type Palette = typeof darkColors;
 
 export const lightColors: Palette = {
-  background: '#f8fafc',
-  surface: '#ffffff',
-  surfaceHighlight: '#f1f5f9',
-  text: '#0f172a',
-  textMuted: '#64748b',
-  accent: '#0284c7',
-  accentMuted: '#38bdf8',
-  primary: '#0284c7',
-  onPrimary: '#ffffff',
-  border: '#e2e8f0',
-  success: '#059669',
-  warning: '#d97706',
-  danger: '#dc2626',
-  card: '#ffffff',
+  background: '#F5F8FA',
+  surface: '#FFFFFF',
+  surfaceHighlight: '#EAF2F6',
+
+  text: '#102344',
+  textMuted: '#64748B',
+
+  accent: '#087F69',
+  accentMuted: '#19B58B',
+
+  primary: '#087DB4',
+  onPrimary: '#FFFFFF',
+
+  border: '#DCE5EB',
+
+  success: '#087F69',
+  warning: '#D97706',
+  danger: '#DC2626',
+
+  card: '#FFFFFF',
 };
 
 export const colors = darkColors;
