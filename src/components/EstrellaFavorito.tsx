@@ -8,10 +8,16 @@ import { authService } from '@/services/authService';
 import { API_URL } from '@/config/api';
 
 interface Props {
-  paradaId: string;
+  id: string;
+  tipo: 'parada' | 'linea';
+  onFavoritoCambiado?: () => void;
 }
 
-export function EstrellaFavoritoParada({ paradaId }: Props) {
+export function EstrellaFavorito({
+  id,
+  tipo,
+  onFavoritoCambiado,
+}: Props) {
   const { paleta } = useTheme();
   const router = useRouter();
 
@@ -30,12 +36,15 @@ export function EstrellaFavoritoParada({ paradaId }: Props) {
       const respuesta = await authService.getCurrentUser();
 
       setEsFavorita(
-        respuesta.datos.paradasFavoritas?.includes(paradaId) ?? false
+        (tipo === 'parada'
+  ? respuesta.datos.paradasFavoritas
+  : respuesta.datos.lineasFavoritas
+)?.includes(id) ?? false
       );
     } catch (error) {
       console.error('Error al consultar favoritos:', error);
     }
-  }, [paradaId]);
+  }, [id, tipo]);
 
   useFocusEffect(
     useCallback(() => {
@@ -69,7 +78,7 @@ export function EstrellaFavoritoParada({ paradaId }: Props) {
       const metodo = esFavorita ? 'DELETE' : 'PUT';
 
       const respuesta = await fetch(
-        `${API_URL}/yo/paradas-favoritas/${encodeURIComponent(paradaId)}`,
+        `${API_URL}/yo/${tipo === 'parada' ? 'paradas' : 'lineas'}-favoritas/${encodeURIComponent(id)}`,
         {
           method: metodo,
           headers: {
@@ -83,8 +92,9 @@ export function EstrellaFavoritoParada({ paradaId }: Props) {
       }
 
       setEsFavorita(!esFavorita);
+      onFavoritoCambiado?.();
     } catch (error) {
-      Alert.alert('Error', 'No se pudo actualizar la parada favorita.');
+      Alert.alert('Error', 'No se pudo actualizar favorito.');
     } finally {
       setCargando(false);
     }

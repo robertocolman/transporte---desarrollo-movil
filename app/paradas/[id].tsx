@@ -21,7 +21,7 @@ import { Linea, Parada } from '@/types';
 import { ThemedText } from '@/components/ThemedText';
 import { Button } from '@/components/Button';
 import { CompassArrow } from '@/components/CompassArrow';
-import { EstrellaFavoritoParada } from '@/components/EstrellaFavoritoParada';
+import { EstrellaFavorito } from '@/components/EstrellaFavorito';
 
 export default function ParadaDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -140,7 +140,7 @@ export default function ParadaDetailScreen() {
             </ThemedText>
           </View>
 
-          <EstrellaFavoritoParada paradaId={parada.id} />
+          <EstrellaFavorito tipo="parada" id={parada.id} />
         </View>
 
         {/* Garita y Código QR */}

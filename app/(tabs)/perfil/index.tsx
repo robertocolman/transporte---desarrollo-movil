@@ -23,11 +23,12 @@ type Usuario = {
 };
 
 export default function PerfilScreen() {
-  const { paleta } = useTheme();
+  const { paleta, preferenciaTema, setTema } = useTheme();
 
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [cargando, setCargando] = useState(true);
   const [favoritosAbiertos, setFavoritosAbiertos] = useState(false);
+  const [aparienciaAbierta, setAparienciaAbierta] = useState(false);
   const [nombresParadas, setNombresParadas] = useState<Record<string, string>>({});
 
   // Comprobar la sesión cada vez que entramos a "Yo"
@@ -363,12 +364,114 @@ export default function PerfilScreen() {
           detalle="Preferencias de avisos"
         />
 
-        <Opcion
-          icono="color-palette-outline"
-          titulo="Apariencia"
-          color={paleta.text}
-          detalle="Tema claro u oscuro"
+        
+        {/* Apariencia desplegable */}
+        <Pressable
+        style={styles.opcion}
+        onPress={() => setAparienciaAbierta(!aparienciaAbierta)}
+        >
+        <Ionicons
+            name="color-palette-outline"
+            size={23}
+            color={paleta.text}
         />
+
+        <View style={{ flex: 1 }}>
+            <Text style={{ color: paleta.text, fontSize: 15, fontWeight: '600' }}>
+            Apariencia
+            </Text>
+
+            <Text style={{ color: paleta.textMuted, fontSize: 12 }}>
+            Tema claro, oscuro o automático
+            </Text>
+        </View>
+
+        <Ionicons
+            name={aparienciaAbierta ? 'chevron-up' : 'chevron-down'}
+            size={20}
+            color={paleta.textMuted}
+        />
+        </Pressable>
+
+        
+        {aparienciaAbierta && (
+        <View style={{ paddingLeft: 37, paddingBottom: 15 }}>
+
+            {/* Tema claro */}
+            <Pressable
+            style={styles.opcion}
+            onPress={() => setTema('light')}
+            >
+            <Ionicons
+                name="sunny-outline"
+                size={21}
+                color={paleta.text}
+            />
+
+            <Text style={{ color: paleta.text, flex: 1 }}>
+                Tema claro
+            </Text>
+
+            {preferenciaTema === 'light' && (
+                <Ionicons
+                name="checkmark-circle"
+                size={22}
+                color={paleta.primary}
+                />
+            )}
+            </Pressable>
+
+            {/* Tema oscuro */}
+            <Pressable
+            style={styles.opcion}
+            onPress={() => setTema('dark')}
+            >
+            <Ionicons
+                name="moon-outline"
+                size={21}
+                color={paleta.text}
+            />
+
+            <Text style={{ color: paleta.text, flex: 1 }}>
+                Tema oscuro
+            </Text>
+
+            {preferenciaTema === 'dark' && (
+                <Ionicons
+                name="checkmark-circle"
+                size={22}
+                color={paleta.primary}
+                />
+            )}
+            </Pressable>
+
+            {/* Tema del sistema */}
+            <Pressable
+            style={styles.opcion}
+            onPress={() => setTema('system')}
+            >
+            <Ionicons
+                name="phone-portrait-outline"
+                size={21}
+                color={paleta.text}
+            />
+
+            <Text style={{ color: paleta.text, flex: 1 }}>
+                Tema del sistema
+            </Text>
+
+            {preferenciaTema === 'system' && (
+                <Ionicons
+                name="checkmark-circle"
+                size={22}
+                color={paleta.primary}
+                />
+            )}
+            </Pressable>
+
+        </View>
+        )}
+
 
         <Opcion
           icono="finger-print-outline"

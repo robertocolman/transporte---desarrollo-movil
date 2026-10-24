@@ -5,7 +5,7 @@ import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useTheme } from '@/hooks/use-theme';
 import { ParadaConDistancia } from '@/services/stopsService';
 import { ThemedText } from './ThemedText';
-import { EstrellaFavoritoParada } from './EstrellaFavoritoParada';
+import { EstrellaFavorito } from './EstrellaFavorito';
 
 interface StopCardProps {
   parada: ParadaConDistancia;
@@ -91,7 +91,7 @@ export function StopCard({ parada }: StopCardProps) {
         )}
 
         <View style={styles.starContainer}>
-          <EstrellaFavoritoParada paradaId={parada.id} />
+          <EstrellaFavorito tipo="parada" id={parada.id} />
         </View>
       </View>
       </View>

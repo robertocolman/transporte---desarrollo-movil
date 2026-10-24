@@ -5,13 +5,17 @@ import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/ThemedText';
 import { Button } from '@/components/Button';
+import { FavoritosRapidos } from '@/components/FavoritosRapidos';
 
 export default function HomeScreen() {
   const { paleta } = useTheme();
   const router = useRouter();
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: paleta.background }]}
+      contentContainerStyle={styles.content}
+>
       {/* Banner de Bienvenida */}
       <View style={[styles.heroCard, { backgroundColor: paleta.surface, borderColor: paleta.border }]}>
         <View style={[styles.iconCircle, { backgroundColor: `${paleta.primary}20` }]}>
@@ -50,6 +54,9 @@ export default function HomeScreen() {
           onPress={() => router.push('/paradas/escanear-qr')}
         />
       </View>
+
+      {/* Favoritos personales del usuario */}
+      <FavoritosRapidos />
 
       {/* Accesos Rápidos a Paradas Frecuentes */}
       <View style={[styles.infoCard, { backgroundColor: paleta.surfaceHighlight, borderColor: paleta.border }]}>
