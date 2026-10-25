@@ -33,6 +33,7 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
+      "expo-notifications",
       "@react-native-vector-icons/ionicons",
       [
         "expo-location",

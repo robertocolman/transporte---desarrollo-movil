@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
+  Switch,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +21,7 @@ type Usuario = {
   email?: string;
   lineasFavoritas?: string[];
   paradasFavoritas?: string[];
+  avisosActivos?: boolean;
 };
 
 export default function PerfilScreen() {
@@ -29,6 +31,8 @@ export default function PerfilScreen() {
   const [cargando, setCargando] = useState(true);
   const [favoritosAbiertos, setFavoritosAbiertos] = useState(false);
   const [aparienciaAbierta, setAparienciaAbierta] = useState(false);
+  const [notificacionesAbiertas, setNotificacionesAbiertas] = useState(false);
+  const [guardandoAvisos, setGuardandoAvisos] = useState(false);
   const [nombresParadas, setNombresParadas] = useState<Record<string, string>>({});
 
   // Comprobar la sesión cada vez que entramos a "Yo"
@@ -87,6 +91,46 @@ export default function PerfilScreen() {
       };
     }, [])
   );
+  
+  async function cambiarAvisos() {
+    if (!usuario || guardandoAvisos) return;
+
+    const nuevoValor = !usuario.avisosActivos;
+
+    setGuardandoAvisos(true);
+
+    try {
+      const token = await authService.getToken();
+
+      if (!token) {
+        Alert.alert('Error', 'Tenés que iniciar sesión.');
+        return;
+      }
+
+      const respuesta = await fetch(`${API_URL}/yo`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          avisosActivos: nuevoValor,
+        }),
+      });
+
+      if (!respuesta.ok) {
+        throw new Error('No se pudo actualizar la preferencia.');
+      }
+
+      const usuarioActualizado = await authService.getCurrentUser();
+      setUsuario(usuarioActualizado.datos);
+    } catch (error) {
+      console.error('Error al guardar los avisos:', error);
+      Alert.alert('Error', 'No se pudo guardar la preferencia de notificaciones.');
+    } finally {
+      setGuardandoAvisos(false);
+    }
+  }
 
   // Cerrar sesión
   async function cerrarSesion() {
@@ -357,12 +401,105 @@ export default function PerfilScreen() {
         </View>
         )}
 
-        <Opcion
-          icono="notifications-outline"
-          titulo="Notificaciones"
-          color={paleta.text}
-          detalle="Preferencias de avisos"
-        />
+        
+        {/* Notificaciones desplegables */}
+        <Pressable
+          style={styles.opcion}
+          onPress={() => setNotificacionesAbiertas(!notificacionesAbiertas)}
+        >
+          <Ionicons
+            name="notifications-outline"
+            size={23}
+            color={paleta.text}
+          />
+
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                color: paleta.text,
+                fontSize: 15,
+                fontWeight: '600',
+              }}
+            >
+              Notificaciones
+            </Text>
+
+            <Text
+              style={{
+                color: paleta.textMuted,
+                fontSize: 12,
+              }}
+            >
+              Preferencias de avisos
+            </Text>
+          </View>
+
+          <Ionicons
+            name={notificacionesAbiertas ? 'chevron-up' : 'chevron-down'}
+            size={20}
+            color={paleta.textMuted}
+          />
+        </Pressable>
+
+        {notificacionesAbiertas && (
+          <View
+            style={{
+              paddingLeft: 37,
+              paddingRight: 10,
+              paddingBottom: 15,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingVertical: 12,
+                gap: 12,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    color: paleta.text,
+                    fontSize: 14,
+                    fontWeight: '500',
+                  }}
+                >
+                  Recibir avisos
+                </Text>
+
+                <Text
+                  style={{
+                    color: paleta.textMuted,
+                    fontSize: 12,
+                    marginTop: 4,
+                  }}
+                >
+                  Activar o desactivar los avisos del transporte
+                </Text>
+              </View>
+
+              <Switch
+                value={usuario.avisosActivos ?? false}
+                onValueChange={cambiarAvisos}
+                disabled={guardandoAvisos}
+                trackColor={{
+                  false: paleta.border,
+                  true: paleta.primary,
+                }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+
+            {guardandoAvisos && (
+              <ActivityIndicator
+                size="small"
+                color={paleta.primary}
+              />
+            )}
+          </View>
+        )}
 
         
         {/* Apariencia desplegable */}
