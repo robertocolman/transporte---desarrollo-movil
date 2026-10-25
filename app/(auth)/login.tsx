@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   TextInput,
   StyleSheet,
@@ -12,6 +12,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { Button } from '@/components/Button';
 import { authService } from '@/services/authService';
 import { useRouter } from 'expo-router';
+import { biometricService } from '@/services/biometricService';
 
 export default function LoginScreen() {
   const { paleta } = useTheme();
@@ -21,6 +22,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mostrarHuella, setMostrarHuella] = useState(false);
 
   const handleLogin = async () => {
     try {
@@ -40,6 +42,36 @@ export default function LoginScreen() {
     }
     
   };
+
+  useEffect(() => {
+    async function comprobarHuella() {
+      const activada = await biometricService.estaActivada();
+      const haySesion = await authService.tieneSesionGuardada();
+
+      setMostrarHuella(activada && haySesion);
+    }
+
+    comprobarHuella();
+  }, []);
+
+  async function ingresarConHuella() {
+    try {
+      setLoading(true);
+
+      const correcto = await biometricService.autenticar();
+
+      if (correcto) {
+        router.replace('/(tabs)/perfil');
+      }
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        'No se pudo realizar la autenticación biométrica.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <KeyboardAvoidingView
@@ -95,7 +127,15 @@ export default function LoginScreen() {
           onPress={handleLogin}
           isLoading={loading}
         />
-
+        
+        {mostrarHuella && (
+          <Button
+            title="Ingresar con huella"
+            variant="outline"
+            onPress={ingresarConHuella}
+          />
+        )}
+        
         <Button
           title="Crear cuenta"
           variant="outline"

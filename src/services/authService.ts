@@ -1,21 +1,27 @@
 import * as SecureStore from 'expo-secure-store';
 import { API_URL } from '@/config/api';
+import { biometricService } from './biometricService';
 
 const TOKEN_KEY = 'user_auth_token';
 
 export const authService = {
-  // Guardar el token para mantener la sesion
   saveToken: async (token: string): Promise<void> => {
-    try {
-      await SecureStore.setItemAsync(TOKEN_KEY, token);
-    } catch (error) {
-      console.error('Error al guardar el token:', error);
-    }
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
+    biometricService.desbloquearSesion();
   },
 
-  // Obtener el token guardado
   getToken: async (): Promise<string | null> => {
     try {
+      const biometriaActiva =
+        await biometricService.estaActivada();
+
+      if (
+        biometriaActiva &&
+        !biometricService.estaDesbloqueada()
+      ) {
+        return null;
+      }
+
       return await SecureStore.getItemAsync(TOKEN_KEY);
     } catch (error) {
       console.error('Error al obtener el token:', error);
@@ -23,14 +29,11 @@ export const authService = {
     }
   },
 
-  // Cerrar sesion y borrar token (logout)
   removeToken: async (): Promise<void> => {
-    try {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-    } catch (error) {
-      console.error('Error al eliminar el token:', error);
-    }
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await biometricService.limpiarSesion();
   },
+
   // Iniciar sesion con email y contraseña
   login: async (email: string, password: string) => {
     const response = await fetch(
@@ -57,6 +60,7 @@ export const authService = {
     }
 
     if (data.datos?.token) {
+      await biometricService.limpiarSesion();
       await authService.saveToken(data.datos.token);
     }
 
@@ -94,6 +98,7 @@ export const authService = {
     }
 
     if (data.datos?.token) {
+      await biometricService.limpiarSesion();
       await authService.saveToken(data.datos.token);
     }
 
@@ -128,6 +133,10 @@ export const authService = {
     }
 
     return data;
+  },
+  tieneSesionGuardada: async (): Promise<boolean> => {
+    const token = await SecureStore.getItemAsync(TOKEN_KEY);
+    return !!token;
   },
 
 };

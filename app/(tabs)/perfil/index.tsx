@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -15,8 +15,10 @@ import { authService } from '@/services/authService';
 import { useTheme } from '@/hooks/use-theme';
 import { API_URL } from '@/config/api';
 import { stopsService } from '@/services/stopsService';
+import { biometricService } from '@/services/biometricService';
 
 type Usuario = {
+  id?: string;
   nombre?: string;
   email?: string;
   lineasFavoritas?: string[];
@@ -34,6 +36,72 @@ export default function PerfilScreen() {
   const [notificacionesAbiertas, setNotificacionesAbiertas] = useState(false);
   const [guardandoAvisos, setGuardandoAvisos] = useState(false);
   const [nombresParadas, setNombresParadas] = useState<Record<string, string>>({});
+
+  const [biometriaActiva, setBiometriaActiva] = useState(false);
+  const [guardandoBiometria, setGuardandoBiometria] = useState(false);
+
+  // Cargar preferencia biométrica
+  useEffect(() => {
+    let activo = true;
+
+    async function cargarBiometria() {
+      const habilitada = usuario
+        ? await biometricService.estaActivada()
+        : false;
+
+      if (activo) {
+        setBiometriaActiva(habilitada);
+      }
+    }
+
+    cargarBiometria();
+
+    return () => {
+      activo = false;
+    };
+  }, [usuario?.id]);
+
+  // Activar o desactivar biometría
+  async function cambiarBiometria() {
+    if (guardandoBiometria) return;
+
+    setGuardandoBiometria(true);
+
+    try {
+      if (biometriaActiva) {
+        await biometricService.desactivar();
+        setBiometriaActiva(false);
+
+        Alert.alert(
+          'Biometría desactivada',
+          'La próxima vez podrás ingresar sin huella.'
+        );
+      } else {
+        const activada = await biometricService.activar();
+
+        if (activada) {
+          setBiometriaActiva(true);
+
+          Alert.alert(
+            'Biometría activada',
+            'Se solicitará tu huella al volver a abrir la aplicación.'
+          );
+        } else {
+          Alert.alert(
+            'No se pudo activar',
+            'Comprobá que tengas una huella configurada y volvé a intentarlo.'
+          );
+        }
+      }
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        'No se pudo cambiar la configuración biométrica.'
+      );
+    } finally {
+      setGuardandoBiometria(false);
+    }
+  }
 
   // Comprobar la sesión cada vez que entramos a "Yo"
   useFocusEffect(
@@ -610,12 +678,34 @@ export default function PerfilScreen() {
         )}
 
 
-        <Opcion
-          icono="finger-print-outline"
-          titulo="Acceso biométrico"
-          color={paleta.text}
-          detalle="Huella o reconocimiento compatible"
-        />
+        <View style={[styles.opcion, { justifyContent: 'space-between' }]}>
+          <Ionicons
+            name="finger-print-outline"
+            size={23}
+            color={paleta.text}
+          />
+
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: paleta.text, fontSize: 15, fontWeight: '600' }}>
+              Acceso biométrico
+            </Text>
+
+            <Text style={{ color: paleta.textMuted, fontSize: 12 }}>
+              Solicitar huella al abrir la aplicación
+            </Text>
+          </View>
+
+          <Switch
+            value={biometriaActiva}
+            onValueChange={cambiarBiometria}
+            disabled={guardandoBiometria}
+            trackColor={{
+              false: paleta.border,
+              true: paleta.primary,
+            }}
+            thumbColor="#FFFFFF"
+          />
+        </View>
       </View>
 
       <Pressable
