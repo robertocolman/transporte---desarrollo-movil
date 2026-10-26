@@ -34,6 +34,20 @@ export default function TabsLayout() {
       />
 
       <Tabs.Screen
+        name="lineas/index"
+        options={{
+          title: 'Líneas',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="bus-outline"
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="perfil"
         options={{
           title: 'Yo',
