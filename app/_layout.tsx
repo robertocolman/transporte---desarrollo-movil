@@ -56,10 +56,38 @@ export default function RootLayout() {
                 }}
               />
               <Stack.Screen
-                name="paradas/[id]"
+                name="paradas/[id]/index"
                 options={{
                   title: 'Detalle de Parada',
-                  headerBackTitle: 'Paradas',
+                  headerBackTitle: 'Atrás',
+                }}
+              />
+              <Stack.Screen
+                name="paradas/[id]/reportar"
+                options={{
+                  title: 'Reportar Demora',
+                  headerBackTitle: 'Atrás',
+                }}
+              />
+              <Stack.Screen
+                name="paradas/[id]/horarios"
+                options={{
+                  title: 'Horarios y Frecuencias',
+                  headerBackTitle: 'Atrás',
+                }}
+              />
+              <Stack.Screen
+                name="lineas/[id]"
+                options={{
+                  title: 'Recorrido de Línea',
+                  headerBackTitle: 'Atrás',
+                }}
+              />
+              <Stack.Screen
+                name="avisos/index"
+                options={{
+                  title: 'Avisos y Novedades',
+                  headerBackTitle: 'Atrás',
                 }}
               />
               <Stack.Screen

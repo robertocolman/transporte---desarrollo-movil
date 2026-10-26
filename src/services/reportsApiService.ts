@@ -71,6 +71,7 @@ export async function subirFotoApi(
       Authorization: `Bearer ${token}`,
     },
     body: formData,
+    signal: AbortSignal.timeout(4000),
   });
 
   const resultado = await verificarRespuesta(response);
@@ -116,6 +117,7 @@ export async function enviarReporteApi(
       fotoUri: fotoUrl,
       fechaHora: reporte.fechaHora,
     }),
+    signal: AbortSignal.timeout(4000),
   });
 
   const resultado = await verificarRespuesta(response);
@@ -128,7 +130,10 @@ export async function obtenerReportesApi(
   paradaId: string
 ): Promise<ReporteDeDemora[]> {
   const response = await fetch(
-    `${API_URL}/reportes-demora?paradaId=${encodeURIComponent(paradaId)}`
+    `${API_URL}/reportes-demora?paradaId=${encodeURIComponent(paradaId)}`,
+    {
+      signal: AbortSignal.timeout(3000),
+    }
   );
 
   const resultado = await verificarRespuesta(response);
@@ -149,6 +154,7 @@ export async function confirmarReporteApi(
       headers: {
         Authorization: `Bearer ${token}`,
       },
+      signal: AbortSignal.timeout(3000),
     }
   );
 

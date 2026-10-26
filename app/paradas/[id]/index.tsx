@@ -22,7 +22,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { Button } from '@/components/Button';
 import { CompassArrow } from '@/components/CompassArrow';
 import { EstrellaFavorito } from '@/components/EstrellaFavorito';
-import { StopReportsList } from '../../src/components/StopReportsList';
+import { StopReportsList } from '@/components/StopReportsList';
 
 export default function ParadaDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -76,7 +76,6 @@ export default function ParadaDetailScreen() {
       </View>
     );
   }
-
 
   const distanciaMetros = coords
     ? calculateDistanceMeters(
@@ -226,7 +225,12 @@ export default function ParadaDetailScreen() {
           <Button
             title="⏱️ Ver Horarios y Próximos Arribos"
             variant="outline"
-            onPress={() => Alert.alert('Próximos Arribos', 'Consultando el motor de frecuencias horarias.')}
+            onPress={() =>
+              router.push({
+                pathname: '/paradas/[id]/horarios',
+                params: { id: parada.id },
+              })
+            }
           />
           <Button
             title="📢 Reportar Colectivo Demorado"
