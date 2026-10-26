@@ -23,6 +23,7 @@ import { Button } from '@/components/Button';
 import { CompassArrow } from '@/components/CompassArrow';
 import { EstrellaFavorito } from '@/components/EstrellaFavorito';
 import { StopReportsList } from '@/components/StopReportsList';
+import { NextArrivalsWidget } from '@/components/NextArrivalsWidget';
 
 export default function ParadaDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -185,6 +186,12 @@ export default function ParadaDetailScreen() {
         variant="primary"
         style={styles.actionButton}
         onPress={openExternalMaps}
+      />
+
+      {/* Widget de Próximos Arribos y Alarmas (Módulo de Esteban) */}
+      <NextArrivalsWidget
+        paradaId={parada.id}
+        nombreParada={parada.nombre}
       />
 
       {/* Líneas que pasan por esta parada */}
