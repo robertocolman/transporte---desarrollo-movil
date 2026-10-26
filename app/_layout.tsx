@@ -4,11 +4,13 @@ import { ThemeProvider } from '@/providers/ThemeProvider';
 import { colors } from '@/theme/colors';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import BiometricStartup from '@/components/BiometricStartup';
+import { ReportsSyncManager } from '../src/components/ReportsSyncManager';
 
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
+        <ReportsSyncManager />
         <BiometricStartup>
           <SafeAreaView
             style={{ flex: 1, backgroundColor: colors.background }}

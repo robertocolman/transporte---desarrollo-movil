@@ -1,11 +1,15 @@
 import * as SecureStore from 'expo-secure-store';
 import { API_URL } from '@/config/api';
 import { biometricService } from './biometricService';
+import Storage from 'expo-sqlite/kv-store';
 
 const TOKEN_KEY = 'user_auth_token';
 
 export const authService = {
   saveToken: async (token: string): Promise<void> => {
+    // Eliminamos el ID de la cuenta anterior.
+    await Storage.removeItem('report_user_id');
+
     await SecureStore.setItemAsync(TOKEN_KEY, token);
     biometricService.desbloquearSesion();
   },
@@ -31,6 +35,10 @@ export const authService = {
 
   removeToken: async (): Promise<void> => {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
+
+    // Eliminamos el ID local al cerrar sesión.
+    await Storage.removeItem('report_user_id');
+
     await biometricService.limpiarSesion();
   },
 
@@ -62,6 +70,22 @@ export const authService = {
     if (data.datos?.token) {
       await biometricService.limpiarSesion();
       await authService.saveToken(data.datos.token);
+
+      try {
+        const respuestaUsuario = await authService.getCurrentUser();
+
+        if (respuestaUsuario.datos?.id) {
+          await Storage.setItem(
+            'report_user_id',
+            respuestaUsuario.datos.id
+          );
+        }
+      } catch (error) {
+        console.warn(
+          'No se pudo guardar el usuario para reportes offline:',
+          error
+        );
+      }
     }
 
     return data;
@@ -100,6 +124,22 @@ export const authService = {
     if (data.datos?.token) {
       await biometricService.limpiarSesion();
       await authService.saveToken(data.datos.token);
+
+      try {
+        const respuestaUsuario = await authService.getCurrentUser();
+
+        if (respuestaUsuario.datos?.id) {
+          await Storage.setItem(
+            'report_user_id',
+            respuestaUsuario.datos.id
+          );
+        }
+      } catch (error) {
+        console.warn(
+          'No se pudo guardar el usuario para reportes offline:',
+          error
+        );
+      }
     }
 
     return data;

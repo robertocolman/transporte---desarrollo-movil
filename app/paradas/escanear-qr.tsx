@@ -105,7 +105,7 @@ export default function EscanearQrScreen() {
     <View style={styles.container}>
       {/* Vista de Cámara */}
       <CameraView
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
         facing="back"
         enableTorch={torchEnabled}
         barcodeScannerSettings={{
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'space-between',
     padding: 20,

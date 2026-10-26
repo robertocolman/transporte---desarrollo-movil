@@ -22,6 +22,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { Button } from '@/components/Button';
 import { CompassArrow } from '@/components/CompassArrow';
 import { EstrellaFavorito } from '@/components/EstrellaFavorito';
+import { StopReportsList } from '../../src/components/StopReportsList';
 
 export default function ParadaDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -230,10 +231,17 @@ export default function ParadaDetailScreen() {
           <Button
             title="📢 Reportar Colectivo Demorado"
             variant="secondary"
-            onPress={() => Alert.alert('Reporte de Demora', 'Formulario para reportar demoras y adjuntar fotografía.')}
+            onPress={() =>
+              router.push({
+                pathname: '/paradas/[id]/reportar',
+                params: { id: parada.id },
+              })
+            }
           />
         </View>
       </View>
+      {/* Reportes comunitarios de esta parada */}
+      <StopReportsList paradaId={parada.id} />
     </ScrollView>
   );
 }
