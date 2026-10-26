@@ -18,11 +18,10 @@ export interface NuevoReporte {
 const dbPromise = SQLite.openDatabaseAsync('reportes.db');
 
 // tabla
-
 async function obtenerDB() {
   const db = await dbPromise;
 
-  // Creamos la tabla si todavía no existe.
+  // crear la tabla si no existe
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS reportes (
       id TEXT PRIMARY KEY NOT NULL,
@@ -40,7 +39,7 @@ async function obtenerDB() {
     );
   `);
 
-  // Revisamos las columnas de una tabla existente.
+  // revisa columnas de tablas existentes
   const columnas = await db.getAllAsync<{ name: string }>(
     'PRAGMA table_info(reportes)'
   );
@@ -49,7 +48,6 @@ async function obtenerDB() {
     (columna) => columna.name === 'estadoEnvio'
   );
 
-  // Actualizamos las instalaciones anteriores sin borrar reportes.
   if (!tieneEstado) {
     await db.execAsync(`
       ALTER TABLE reportes
@@ -68,7 +66,6 @@ async function obtenerDB() {
     `);
   }
 
-  // Corregimos registros anteriores que ya estaban sincronizados.
   await db.runAsync(`
     UPDATE reportes
     SET estadoEnvio = 'sincronizado'
@@ -226,7 +223,7 @@ export async function sincronizarReportesPendientes(): Promise<void> {
   try {
     const estadoRed = await Network.getNetworkStateAsync();
 
-    // si no hay onternet conservar los reportes pendientes.
+    // si no hay onternet conservar los reportes pendientes
     if (
       !estadoRed.isConnected ||
       estadoRed.isInternetReachable === false
@@ -235,13 +232,13 @@ export async function sincronizarReportesPendientes(): Promise<void> {
     }
 
     
-    // Obtenemos el usuario de la sesión actual.
+    // obtener usuario actual
     let usuarioId: string;
 
     try {
       usuarioId = await obtenerUsuarioReportes();
     } catch (error) {
-      // Si no hay una sesión válida, no intentamos enviar reportes.
+      // no hay reporte sin sesion valida
       console.warn(
         'No se pueden sincronizar reportes sin una sesión válida.',
         error
@@ -249,7 +246,7 @@ export async function sincronizarReportesPendientes(): Promise<void> {
       return;
     }
 
-    // Recuperamos solamente los reportes de este usuario.
+    // recuparar solamente los reportes de este usuario
     const todosPendientes = await listarReportesPendientes();
 
     const pendientes = todosPendientes.filter(
@@ -283,15 +280,15 @@ export async function sincronizarReportesPendientes(): Promise<void> {
       } catch (error) {
         if (error instanceof ErrorApi) {
           if (error.estado === 401 || error.estado === 403) {
-            // La sesión no es válida o no tiene permisos.
-            // Conservamos el reporte y detenemos la sincronización.
+            // la sesión no es válida o no tiene permisos
+            // conservamos el reporte y no se sincroniza
             console.warn('Se necesita una sesión válida para sincronizar.');
             break;
           }
 
           if (error.estado === 408 || error.estado === 429) {
-            // Son errores temporales.
-            // Conservamos el reporte para intentarlo más adelante.
+            // errores temporales
+            // conservamos el reporte para intentarlo mas adelante
             console.warn(
               `Error temporal al enviar el reporte ${reporte.id}: ${error.message}`
             );
@@ -299,8 +296,8 @@ export async function sincronizarReportesPendientes(): Promise<void> {
           }
 
           if (error.estado >= 400 && error.estado < 500) {
-            // El servidor rechazó el reporte.
-            // Lo guardamos como rechazado para no reenviarlo automáticamente.
+            // el servidor rechazó el reporte
+            // lo guardamos como rechazado para no reenviarlo automaticamente
             await marcarReporteRechazado(reporte.id);
 
             console.warn(
@@ -312,8 +309,8 @@ export async function sincronizarReportesPendientes(): Promise<void> {
 
         }
 
-        // Problemas de conexión o errores del servidor:
-        // conservamos el reporte para reintentarlo.
+        // problemas de conexión o errores del servidor
+        // conservamos el reporte para reintentarlo
         console.error(
           `No se pudo sincronizar el reporte ${reporte.id}:`,
           error

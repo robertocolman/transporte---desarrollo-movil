@@ -25,7 +25,7 @@ export async function guardarFotoReporte(uri: string): Promise<string> {
   // referencias de origen y destino
   const origen = new File(uri);
 
-  // La API permite fotografías de hasta 5 MB.
+  // la API permite fotos de hasta 5 MB
   const tamañoMaximo = 5 * 1024 * 1024;
   if (origen.size > tamañoMaximo) {
     throw new Error(

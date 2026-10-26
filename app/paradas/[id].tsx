@@ -77,7 +77,7 @@ export default function ParadaDetailScreen() {
     );
   }
 
-  // Cálculo en vivo de distancia y rumbo si tenemos GPS del usuario
+
   const distanciaMetros = coords
     ? calculateDistanceMeters(
         coords.latitude,

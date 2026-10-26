@@ -27,7 +27,6 @@ async function obtenerToken(): Promise<string> {
 }
 
 // verifica la respuesta
-
 export class ErrorApi extends Error {
   constructor(
     public codigo: string,
@@ -56,13 +55,11 @@ async function verificarRespuesta(response: Response) {
 
 
 // 1. sube una foto a la api
-
 export async function subirFotoApi(
   fotoUri: string
 ): Promise<string> {
   const token = await obtenerToken();
 
-  // Expo SDK 57 admite archivos File directamente en FormData.
   const archivo = new File(fotoUri);
 
   const formData = new FormData();
@@ -92,14 +89,13 @@ export async function enviarReporteApi(
 
   const token = await obtenerToken();
 
-  // Si ya tenemos una URL remota, reutilizamos esa foto.
   let fotoUrl = fotoUrlExistente;
 
-  // Si todavía no se subió, la enviamos a la API.
+  // si todavía no se subió la enviamos a la API
   if (!fotoUrl) {
     fotoUrl = await subirFotoApi(reporte.fotoUri);
 
-    // Guardamos la URL antes de intentar publicar el reporte.
+    // guardamos la URL antes de intentar publicar el reporte
     if (alSubirFoto) {
       await alSubirFoto(fotoUrl);
     }

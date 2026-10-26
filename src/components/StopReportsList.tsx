@@ -41,9 +41,6 @@ interface Props {
   paradaId: string;
 }
 
-// La API local puede devolver URLs con localhost.
-// En el celular debemos usar la dirección de la API
-// configurada en src/config/api.ts.
 function obtenerUrlFoto(uri: string): string {
   if (!uri.startsWith('http://') && !uri.startsWith('https://')) {
     return uri;
@@ -105,7 +102,7 @@ export function StopReportsList({ paradaId }: Props) {
       try {
         usuarioId = await obtenerUsuarioReportes();
       } catch {
-        // Sin sesión, no mostramos reportes privados locales.
+
       }
 
       const propios = locales.filter(
@@ -114,7 +111,6 @@ export function StopReportsList({ paradaId }: Props) {
           reporte.usuarioId === usuarioId
       );
 
-      // La API muestra reportes activos de los últimos 90 minutos.
       const limite = Date.now() - 90 * 60 * 1000;
 
       const pendientes = propios.filter(
@@ -123,8 +119,6 @@ export function StopReportsList({ paradaId }: Props) {
           new Date(reporte.fechaHora).getTime() >= limite
       );
 
-      // Los rechazados no forman parte de las demoras activas.
-      // Se muestran en una sección informativa independiente.
       const rechazadosPropios = propios.filter(
         (reporte) =>
           reporte.estadoEnvio === 'rechazado'
@@ -155,7 +149,6 @@ export function StopReportsList({ paradaId }: Props) {
         setReportes(combinados);
         setMensaje('');
       } catch {
-        // Si la API falla, conservamos los reportes propios pendientes.
         setReportes(pendientes);
         setMensaje(
           'No se pudo conectar con el servidor. ' +
