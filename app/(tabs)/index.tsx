@@ -48,6 +48,20 @@ export default function HomeScreen() {
         />
 
         <Button
+          title="🚍 Ver Líneas y Recorridos en Mapa"
+          variant="secondary"
+          style={styles.actionButton}
+          onPress={() => router.push('/(tabs)/lineas')}
+        />
+
+        <Button
+          title="📢 Avisos Oficiales y Video de Tránsito"
+          variant="outline"
+          style={styles.actionButton}
+          onPress={() => router.push('/avisos')}
+        />
+
+        <Button
           title="📷 Escanear Código QR de Parada"
           variant="outline"
           style={styles.actionButton}

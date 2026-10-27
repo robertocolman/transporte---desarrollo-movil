@@ -4,11 +4,13 @@ import { ThemeProvider } from '@/providers/ThemeProvider';
 import { colors } from '@/theme/colors';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import BiometricStartup from '@/components/BiometricStartup';
+import { ReportsSyncManager } from '../src/components/ReportsSyncManager';
 
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
+        <ReportsSyncManager />
         <BiometricStartup>
           <SafeAreaView
             style={{ flex: 1, backgroundColor: colors.background }}
@@ -54,10 +56,38 @@ export default function RootLayout() {
                 }}
               />
               <Stack.Screen
-                name="paradas/[id]"
+                name="paradas/[id]/index"
                 options={{
                   title: 'Detalle de Parada',
-                  headerBackTitle: 'Paradas',
+                  headerBackTitle: 'Atrás',
+                }}
+              />
+              <Stack.Screen
+                name="paradas/[id]/reportar"
+                options={{
+                  title: 'Reportar Demora',
+                  headerBackTitle: 'Atrás',
+                }}
+              />
+              <Stack.Screen
+                name="paradas/[id]/horarios"
+                options={{
+                  title: 'Horarios y Frecuencias',
+                  headerBackTitle: 'Atrás',
+                }}
+              />
+              <Stack.Screen
+                name="lineas/[id]"
+                options={{
+                  title: 'Recorrido de Línea',
+                  headerBackTitle: 'Atrás',
+                }}
+              />
+              <Stack.Screen
+                name="avisos/index"
+                options={{
+                  title: 'Avisos y Novedades',
+                  headerBackTitle: 'Atrás',
                 }}
               />
               <Stack.Screen

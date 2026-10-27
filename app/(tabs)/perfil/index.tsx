@@ -10,7 +10,7 @@ import {
   Switch,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { authService } from '@/services/authService';
 import { useTheme } from '@/hooks/use-theme';
 import { API_URL } from '@/config/api';

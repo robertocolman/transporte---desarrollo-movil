@@ -1,6 +1,6 @@
 
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function TabsLayout() {
@@ -26,6 +26,20 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="home-outline"
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="lineas/index"
+        options={{
+          title: 'Líneas',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="bus-outline"
               size={size}
               color={color}
             />

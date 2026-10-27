@@ -22,6 +22,8 @@ import { ThemedText } from '@/components/ThemedText';
 import { Button } from '@/components/Button';
 import { CompassArrow } from '@/components/CompassArrow';
 import { EstrellaFavorito } from '@/components/EstrellaFavorito';
+import { StopReportsList } from '@/components/StopReportsList';
+import { NextArrivalsWidget } from '@/components/NextArrivalsWidget';
 
 export default function ParadaDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -76,7 +78,6 @@ export default function ParadaDetailScreen() {
     );
   }
 
-  // Cálculo en vivo de distancia y rumbo si tenemos GPS del usuario
   const distanciaMetros = coords
     ? calculateDistanceMeters(
         coords.latitude,
@@ -187,6 +188,12 @@ export default function ParadaDetailScreen() {
         onPress={openExternalMaps}
       />
 
+      {/* Widget de Próximos Arribos y Alarmas (Módulo de Esteban) */}
+      <NextArrivalsWidget
+        paradaId={parada.id}
+        nombreParada={parada.nombre}
+      />
+
       {/* Líneas que pasan por esta parada */}
       <View style={[styles.card, { backgroundColor: paleta.surface, borderColor: paleta.border, marginTop: 12 }]}>
         <ThemedText variant="subtitle" style={styles.sectionHeader}>
@@ -225,15 +232,27 @@ export default function ParadaDetailScreen() {
           <Button
             title="⏱️ Ver Horarios y Próximos Arribos"
             variant="outline"
-            onPress={() => Alert.alert('Próximos Arribos', 'Consultando el motor de frecuencias horarias.')}
+            onPress={() =>
+              router.push({
+                pathname: '/paradas/[id]/horarios',
+                params: { id: parada.id },
+              })
+            }
           />
           <Button
             title="📢 Reportar Colectivo Demorado"
             variant="secondary"
-            onPress={() => Alert.alert('Reporte de Demora', 'Formulario para reportar demoras y adjuntar fotografía.')}
+            onPress={() =>
+              router.push({
+                pathname: '/paradas/[id]/reportar',
+                params: { id: parada.id },
+              })
+            }
           />
         </View>
       </View>
+      {/* Reportes comunitarios de esta parada */}
+      <StopReportsList paradaId={parada.id} />
     </ScrollView>
   );
 }
