@@ -34,6 +34,8 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      <FavoritosRapidos />
+      
       {/* Acciones Rápidas */}
       <View style={styles.section}>
         <ThemedText variant="subtitle" style={styles.sectionTitle}>
@@ -69,8 +71,6 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* Favoritos personales del usuario */}
-      <FavoritosRapidos />
 
       {/* Accesos Rápidos a Paradas Frecuentes */}
       <View style={[styles.infoCard, { backgroundColor: paleta.surfaceHighlight, borderColor: paleta.border }]}>

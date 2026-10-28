@@ -43,6 +43,38 @@ export function NextArrivalsWidget({ paradaId, nombreParada }: Props) {
     return () => clearInterval(timer);
   }, [paradaId]);
 
+  useEffect(() => {
+    let montado = true;
+
+    async function recuperarRecordatorios() {
+      const encontrados = await Promise.all(
+        arribos.map(async (arribo) => {
+          const id = await notificationsService.buscarAvisoArribo(
+            arribo.lineaNumero,
+            nombreParada,
+            arribo.horaProgramada
+          );
+
+          return [arribo.horarioId, id] as const;
+        })
+      );
+
+      if (montado) {
+        setRecordatorios(
+          Object.fromEntries(
+            encontrados.filter(([, id]) => Boolean(id))
+          ) as Record<string, string>
+        );
+      }
+    }
+
+    recuperarRecordatorios().catch(() => {});
+
+    return () => {
+      montado = false;
+    };
+  }, [arribos, nombreParada]);
+
   const agendarNotificacion = async (arribo: ProximoArribo) => {
     const idExistente = recordatorios[arribo.horarioId];
 
