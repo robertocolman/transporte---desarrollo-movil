@@ -12,6 +12,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/ThemedText';
 import { authService } from '@/services/authService';
 import { stopsService } from '@/services/stopsService';
+import { linesService } from '@/services/linesService';
 import { EstrellaFavorito } from './EstrellaFavorito';
 
 type Favorito = {
@@ -23,7 +24,6 @@ type Favorito = {
 export function FavoritosRapidos() {
   const { paleta } = useTheme();
   const router = useRouter();
-
   const [favoritos, setFavoritos] = useState<Favorito[]>([]);
 
   useFocusEffect(
@@ -42,7 +42,7 @@ export function FavoritosRapidos() {
           const respuesta = await authService.getCurrentUser();
           const usuario = respuesta.datos;
 
-          const paradas = await Promise.all(
+          const paradas: Favorito[] = await Promise.all(
             (usuario.paradasFavoritas ?? []).map(async (id: string) => {
               const parada = await stopsService.getStopById(id);
 
@@ -54,11 +54,17 @@ export function FavoritosRapidos() {
             })
           );
 
-          const lineas: Favorito[] = (usuario.lineasFavoritas ?? []).map(
-            (id: string) => ({
-              id,
-              nombre: `Línea ${id.replace(/^lin-/, '')}`,
-              tipo: 'linea',
+          const lineas: Favorito[] = await Promise.all(
+            (usuario.lineasFavoritas ?? []).map(async (id: string) => {
+              const linea = await linesService.getLineById(id);
+
+              return {
+                id,
+                nombre: linea
+                  ? `Línea ${linea.numero} - ${linea.nombre}`
+                  : `Línea ${id.replace(/^lin-/, '')}`,
+                tipo: 'linea' as const,
+              };
             })
           );
 
@@ -85,10 +91,7 @@ export function FavoritosRapidos() {
   return (
     <View style={styles.section}>
       <View style={styles.header}>
-        <ThemedText variant="subtitle">
-          Mis favoritos
-        </ThemedText>
-
+        <ThemedText variant="subtitle">Mis favoritos</ThemedText>
         <ThemedText variant="caption" color={paleta.textMuted}>
           Deslizá →
         </ThemedText>
@@ -105,8 +108,9 @@ export function FavoritosRapidos() {
             onPress={() => {
               if (favorito.tipo === 'parada') {
                 router.push(`/paradas/${favorito.id}` as any);
+              } else {
+                router.push(`/lineas/${favorito.id}` as any);
               }
-              // La navegación a líneas se agregará cuando este hecho
             }}
             style={[
               styles.card,
@@ -118,11 +122,7 @@ export function FavoritosRapidos() {
           >
             <View style={styles.cardHeader}>
               <Ionicons
-                name={
-                  favorito.tipo === 'parada'
-                    ? 'location-outline'
-                    : 'bus-outline'
-                }
+                name={favorito.tipo === 'parada' ? 'location-outline' : 'bus-outline'}
                 size={24}
                 color={paleta.primary}
               />
@@ -131,49 +131,29 @@ export function FavoritosRapidos() {
                 tipo={favorito.tipo}
                 id={favorito.id}
                 onFavoritoCambiado={() => {
-                    setFavoritos((anteriores) =>
+                  setFavoritos((anteriores) =>
                     anteriores.filter(
-                        (item) =>
+                      (item) =>
                         !(item.id === favorito.id && item.tipo === favorito.tipo)
                     )
-                    );
+                  );
                 }}
               />
             </View>
 
-            <ThemedText
-              variant="bold"
-              numberOfLines={2}
-            >
+            <ThemedText variant="bold" numberOfLines={2}>
               {favorito.nombre}
             </ThemedText>
 
-            <ThemedText
-              variant="caption"
-              color={paleta.textMuted}
-            >
-              {favorito.tipo === 'parada'
-                ? 'Parada favorita'
-                : 'Línea favorita'}
+            <ThemedText variant="caption" color={paleta.textMuted}>
+              {favorito.tipo === 'parada' ? 'Parada favorita' : 'Línea favorita'}
             </ThemedText>
 
             <View style={styles.cardFooter}>
-              <ThemedText
-                variant="caption"
-                color={paleta.primary}
-              >
-                {favorito.tipo === 'parada'
-                  ? 'Ver parada'
-                  : 'Línea guardada'}
+              <ThemedText variant="caption" color={paleta.primary}>
+                {favorito.tipo === 'parada' ? 'Ver parada' : 'Ver línea'}
               </ThemedText>
-
-              {favorito.tipo === 'parada' && (
-                <Ionicons
-                  name="arrow-forward"
-                  size={16}
-                  color={paleta.primary}
-                />
-              )}
+              <Ionicons name="arrow-forward" size={16} color={paleta.primary} />
             </View>
           </Pressable>
         ))}

@@ -15,6 +15,8 @@ import { authService } from '@/services/authService';
 import { useTheme } from '@/hooks/use-theme';
 import { API_URL } from '@/config/api';
 import { stopsService } from '@/services/stopsService';
+import { linesService } from '@/services/linesService';
+import { pushNotificationService } from '@/services/pushNotificationService';
 import { biometricService } from '@/services/biometricService';
 
 type Usuario = {
@@ -36,6 +38,7 @@ export default function PerfilScreen() {
   const [notificacionesAbiertas, setNotificacionesAbiertas] = useState(false);
   const [guardandoAvisos, setGuardandoAvisos] = useState(false);
   const [nombresParadas, setNombresParadas] = useState<Record<string, string>>({});
+  const [nombresLineas, setNombresLineas] = useState<Record<string, string>>({});
 
   const [biometriaActiva, setBiometriaActiva] = useState(false);
   const [guardandoBiometria, setGuardandoBiometria] = useState(false);
@@ -115,11 +118,21 @@ export default function PerfilScreen() {
           const token = await authService.getToken();
 
           if (!token) {
-            if (activo) setUsuario(null);
+            if (activo) {
+              setUsuario(null);
+              setNombresParadas({});
+              setNombresLineas({});
+            }
             return;
           }
 
           const respuesta = await authService.getCurrentUser();
+
+          if (respuesta.datos?.avisosActivos && respuesta.datos?.id) {
+            pushNotificationService.registrar(respuesta.datos.id).catch((error) => {
+              console.error('Error al registrar notificaciones push:', error);
+            });
+          }
 
             if (activo) {
             setUsuario(respuesta.datos);
@@ -137,6 +150,21 @@ export default function PerfilScreen() {
 
             if (activo) {
             setNombresParadas(Object.fromEntries(resultados));
+            }
+
+            const idsLineas = respuesta.datos.lineasFavoritas ?? [];
+            const resultadosLineas = await Promise.all(
+              idsLineas.map(async (id: string) => {
+                const linea = await linesService.getLineById(id);
+                return [
+                  id,
+                  linea ? `Línea ${linea.numero} - ${linea.nombre}` : `Línea ${id.replace(/^lin-/, '')}`,
+                ] as const;
+              })
+            );
+
+            if (activo) {
+              setNombresLineas(Object.fromEntries(resultadosLineas));
             }
           
         } catch (error) {
@@ -192,6 +220,16 @@ export default function PerfilScreen() {
 
       const usuarioActualizado = await authService.getCurrentUser();
       setUsuario(usuarioActualizado.datos);
+
+      try {
+        if (nuevoValor && usuarioActualizado.datos?.id) {
+          await pushNotificationService.registrar(usuarioActualizado.datos.id);
+        } else if (!nuevoValor) {
+          await pushNotificationService.desregistrar();
+        }
+      } catch (error) {
+        console.error('Error al actualizar registro push:', error);
+      }
     } catch (error) {
       console.error('Error al guardar los avisos:', error);
       Alert.alert('Error', 'No se pudo guardar la preferencia de notificaciones.');
@@ -203,8 +241,16 @@ export default function PerfilScreen() {
   // Cerrar sesión
   async function cerrarSesion() {
     try {
+      try {
+        await pushNotificationService.desregistrar();
+      } catch (error) {
+        console.error('Error al dar de baja notificaciones push:', error);
+      }
+
       await authService.removeToken();
       setUsuario(null);
+      setNombresParadas({});
+      setNombresLineas({});
     } catch (error) {
       Alert.alert('Error', 'No se pudo cerrar la sesión.');
     }
@@ -403,7 +449,7 @@ export default function PerfilScreen() {
                         style={styles.favorito}
                     >
                         <Text style={{ color: paleta.text, flex: 1, fontWeight: '500' }}>
-                            {`Línea ${lineaId.replace(/^lin-/, '')}`}
+                            {nombresLineas[lineaId] ?? `Línea ${lineaId.replace(/^lin-/, '')}`}
                         </Text>
 
                         <Pressable

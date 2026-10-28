@@ -21,39 +21,70 @@ export function NextArrivalsWidget({ paradaId, nombreParada }: Props) {
   const { paleta } = useTheme();
   const [arribos, setArribos] = useState<ProximoArribo[]>([]);
   const [cargando, setCargando] = useState<boolean>(true);
-  const [recordatorioId, setRecordatorioId] = useState<string | null>(null);
+  // Guarda el ID real de cada notificación para poder cancelarla.
+  const [recordatorios, setRecordatorios] = useState<Record<string, string>>({});
 
   const cargarArribos = async () => {
     setCargando(true);
-    const data = await schedulesService.calcularProximosArribos(paradaId);
-    setArribos(data);
-    setCargando(false);
+    try {
+      const data = await schedulesService.calcularProximosArribos(paradaId);
+      setArribos(data);
+    } catch (error) {
+      console.error('Error al cargar próximos arribos:', error);
+      setArribos([]);
+    } finally {
+      setCargando(false);
+    }
   };
 
   useEffect(() => {
     cargarArribos();
-    // Refresco automático cada 30 segundos
     const timer = setInterval(cargarArribos, 30000);
     return () => clearInterval(timer);
   }, [paradaId]);
 
   const agendarNotificacion = async (arribo: ProximoArribo) => {
-    const notifId = await notificationsService.programarAvisoArribo(
-      arribo.lineaNumero,
-      nombreParada,
-      arribo.minutosRestantes
-    );
+    const idExistente = recordatorios[arribo.horarioId];
 
-    if (notifId) {
-      setRecordatorioId(arribo.horarioId);
-      Alert.alert(
-        '🔔 Recordatorio Activado',
-        `Te avisaremos con una notificación local cuando la Línea ${arribo.lineaNumero} esté llegando a la parada "${nombreParada}".`
+    try {
+      if (idExistente) {
+        await notificationsService.cancelarAvisoArribo(idExistente);
+        setRecordatorios((actuales) => {
+          const siguiente = { ...actuales };
+          delete siguiente[arribo.horarioId];
+          return siguiente;
+        });
+        Alert.alert('Recordatorio cancelado', 'Se canceló el recordatorio de este colectivo.');
+        return;
+      }
+
+      const notifId = await notificationsService.programarAvisoArribo(
+        arribo.lineaNumero,
+        nombreParada,
+        arribo.horaProgramada
       );
-    } else {
+
+      if (notifId) {
+        setRecordatorios((actuales) => ({
+          ...actuales,
+          [arribo.horarioId]: notifId,
+        }));
+        Alert.alert(
+          'Recordatorio activado',
+          `Te avisaremos 10 minutos antes del horario publicado de la Línea ${arribo.lineaNumero}.`
+        );
+      } else {
+        Alert.alert(
+          'Permiso requerido',
+          'Habilitá las notificaciones para recibir recordatorios.'
+        );
+      }
+    } catch (error) {
       Alert.alert(
-        'Permiso Requerido',
-        'Por favor habilitá los permisos de notificaciones para recibir alertas de arribo.'
+        'No se pudo programar',
+        error instanceof Error
+          ? error.message
+          : 'Ocurrió un error al programar el recordatorio.'
       );
     }
   };
@@ -64,10 +95,9 @@ export function NextArrivalsWidget({ paradaId, nombreParada }: Props) {
         <View style={styles.titleRow}>
           <Ionicons name="time" size={20} color={paleta.primary} />
           <ThemedText variant="bold" style={styles.headerTitle}>
-            Próximos Arribos en Tiempo Real
+            Próximos arribos según la tabla
           </ThemedText>
         </View>
-
         <Pressable onPress={cargarArribos} hitSlop={8}>
           <Ionicons name="refresh" size={18} color={paleta.textMuted} />
         </Pressable>
@@ -91,7 +121,7 @@ export function NextArrivalsWidget({ paradaId, nombreParada }: Props) {
         <View style={styles.list}>
           {arribos.map((item) => {
             const esInminente = item.minutosRestantes <= 5;
-            const tieneAlarma = recordatorioId === item.horarioId;
+            const tieneAlarma = Boolean(recordatorios[item.horarioId]);
 
             return (
               <View
@@ -104,14 +134,12 @@ export function NextArrivalsWidget({ paradaId, nombreParada }: Props) {
                   },
                 ]}
               >
-                {/* Badge de Línea */}
                 <View style={[styles.lineBadge, { backgroundColor: item.lineaColor }]}>
                   <ThemedText variant="bold" color="#FFFFFF">
                     L{item.lineaNumero}
                   </ThemedText>
                 </View>
 
-                {/* Destino y Hora */}
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <ThemedText variant="bold" numberOfLines={1}>
                     {item.destino}
@@ -121,31 +149,21 @@ export function NextArrivalsWidget({ paradaId, nombreParada }: Props) {
                   </ThemedText>
                 </View>
 
-                {/* Minutos Restantes */}
                 <View style={styles.tiempoContainer}>
-                  <View
-                    style={[
-                      styles.tiempoBadge,
-                      {
-                        backgroundColor: esInminente ? `${paleta.success}20` : `${paleta.primary}15`,
-                      },
-                    ]}
-                  >
-                    <ThemedText
-                      variant="bold"
-                      color={esInminente ? paleta.success : paleta.primary}
-                    >
-                      {item.minutosRestantes === 0
-                        ? '¡Llegando!'
-                        : `En ${item.minutosRestantes} min`}
+                  <View style={[
+                    styles.tiempoBadge,
+                    { backgroundColor: esInminente ? `${paleta.success}20` : `${paleta.primary}15` },
+                  ]}>
+                    <ThemedText variant="bold" color={esInminente ? paleta.success : paleta.primary}>
+                      {item.minutosRestantes === 0 ? '¡Llegando!' : `En ${item.minutosRestantes} min`}
                     </ThemedText>
                   </View>
 
-                  {/* Botón de Recordatorio */}
                   <Pressable
                     style={styles.notifBtn}
                     onPress={() => agendarNotificacion(item)}
                     hitSlop={8}
+                    accessibilityLabel={tieneAlarma ? 'Cancelar recordatorio' : 'Programar recordatorio'}
                   >
                     <Ionicons
                       name={tieneAlarma ? 'notifications' : 'notifications-outline'}
@@ -181,9 +199,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  headerTitle: {
-    fontSize: 15,
-  },
+  headerTitle: { fontSize: 15 },
   loadingBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -194,9 +210,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
   },
-  list: {
-    gap: 10,
-  },
+  list: { gap: 10 },
   arriboItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -221,7 +235,5 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
   },
-  notifBtn: {
-    padding: 4,
-  },
+  notifBtn: { padding: 4 },
 });
