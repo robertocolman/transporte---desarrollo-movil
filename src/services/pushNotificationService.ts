@@ -1,5 +1,4 @@
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
@@ -13,7 +12,6 @@ const CANAL_PUSH = 'avisos-transporte';
 
 export const pushNotificationService = {
   async registrar(usuarioId: string): Promise<boolean> {
-    // Las notificaciones push remotas se prueban en una build, no en Expo Go Android.
     if (Constants.appOwnership === 'expo' || !Device.isDevice) {
       return false;
     }
@@ -46,6 +44,10 @@ export const pushNotificationService = {
         return false;
       }
     }
+
+    // Carga diferida: evita evaluar el módulo nativo al abrir Perfil en Expo Go.
+    // En la APK/development build compatible, se carga para registrar las push.
+    const Notifications = await import('expo-notifications');
 
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync(CANAL_PUSH, {
