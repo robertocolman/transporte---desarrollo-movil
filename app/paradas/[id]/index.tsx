@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Linking,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
@@ -34,21 +35,35 @@ export default function ParadaDetailScreen() {
   const [parada, setParada] = useState<Parada | null>(null);
   const [lineas, setLineas] = useState<Linea[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadDetail() {
-      if (!id) return;
+  const loadDetail = useCallback(async () => {
+    if (!id) return;
+    try {
       setIsLoading(true);
+      setErrorMessage(null);
       const data = await stopsService.getStopById(id);
+      setParada(data);
       if (data) {
-        setParada(data);
         const lns = await stopsService.getLinesForStop(data.lineaIds);
         setLineas(lns);
+      } else {
+        setLineas([]);
       }
+    } catch (err: any) {
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : 'No pudimos obtener los datos de la parada.'
+      );
+    } finally {
       setIsLoading(false);
     }
-    loadDetail();
   }, [id]);
+
+  useEffect(() => {
+    loadDetail();
+  }, [loadDetail]);
 
   if (isLoading) {
     return (
@@ -57,6 +72,36 @@ export default function ParadaDetailScreen() {
         <ThemedText variant="body" color={paleta.textMuted} style={{ marginTop: 12 }}>
           Cargando parada...
         </ThemedText>
+      </View>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <View style={[styles.centerState, { backgroundColor: paleta.background }]}>
+        <Ionicons name="cloud-offline-outline" size={48} color={paleta.danger} />
+        <ThemedText variant="subtitle" style={{ marginTop: 12, textAlign: 'center' }}>
+          No pudimos cargar la parada
+        </ThemedText>
+        <ThemedText
+          variant="caption"
+          color={paleta.textMuted}
+          style={{ marginTop: 6, textAlign: 'center' }}
+        >
+          {errorMessage}
+        </ThemedText>
+        <Button
+          title="Reintentar"
+          variant="primary"
+          style={{ marginTop: 16, minWidth: 160 }}
+          onPress={loadDetail}
+        />
+        <Button
+          title="Volver"
+          variant="outline"
+          style={{ marginTop: 10, minWidth: 160 }}
+          onPress={() => router.back()}
+        />
       </View>
     );
   }
@@ -122,7 +167,10 @@ export default function ParadaDetailScreen() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: paleta.background }]} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: paleta.background }]}
+      contentContainerStyle={styles.content}
+    >
       {/* Cabecera de la parada */}
       <View style={[styles.card, { backgroundColor: paleta.surface, borderColor: paleta.border }]}>
         <View style={styles.headerTitleRow}>
@@ -188,39 +236,81 @@ export default function ParadaDetailScreen() {
         onPress={openExternalMaps}
       />
 
-      {/* Widget de Próximos Arribos y Alarmas (Módulo de Esteban) */}
+      {/* Widget de Próximos Arribos y Alarmas */}
       <NextArrivalsWidget
         paradaId={parada.id}
         nombreParada={parada.nombre}
       />
 
       {/* Líneas que pasan por esta parada */}
-      <View style={[styles.card, { backgroundColor: paleta.surface, borderColor: paleta.border, marginTop: 12 }]}>
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: paleta.surface, borderColor: paleta.border, marginTop: 12 },
+        ]}
+      >
         <ThemedText variant="subtitle" style={styles.sectionHeader}>
-          Líneas que operan en esta parada ({lineas.length})
+          Líneas que operan en esta parada ({parada.lineaIds.length})
         </ThemedText>
 
         <View style={styles.linesList}>
-          {lineas.map((linea) => (
-            <View key={linea.id} style={[styles.lineItem, { borderColor: paleta.border }]}>
-              <View style={[styles.lineBadge, { backgroundColor: linea.color }]}>
-                <ThemedText variant="bold" color="#fff">
-                  L{linea.numero}
-                </ThemedText>
-              </View>
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <ThemedText variant="bold">{linea.nombre}</ThemedText>
-                <ThemedText variant="caption" color={paleta.textMuted}>
-                  {linea.empresa}
-                </ThemedText>
-              </View>
-            </View>
-          ))}
+          {lineas.length > 0
+            ? lineas.map((linea) => (
+                <Pressable
+                  key={linea.id}
+                  onPress={() => router.push(`/lineas/${linea.id}` as any)}
+                  style={({ pressed }) => [
+                    styles.lineItem,
+                    { borderColor: paleta.border, opacity: pressed ? 0.8 : 1 },
+                  ]}
+                >
+                  <View style={[styles.lineBadge, { backgroundColor: linea.color }]}>
+                    <ThemedText variant="bold" color="#fff">
+                      L{linea.numero}
+                    </ThemedText>
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <ThemedText variant="bold">{linea.nombre}</ThemedText>
+                    <ThemedText variant="caption" color={paleta.textMuted}>
+                      {linea.empresa}
+                    </ThemedText>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={paleta.textMuted} />
+                </Pressable>
+              ))
+            : parada.lineaIds.map((lId) => (
+                <Pressable
+                  key={lId}
+                  onPress={() => router.push(`/lineas/${lId}` as any)}
+                  style={[styles.lineItem, { borderColor: paleta.border }]}
+                >
+                  <View style={[styles.lineBadge, { backgroundColor: paleta.primary }]}>
+                    <ThemedText variant="bold" color="#fff">
+                      L{lId.replace(/^lin-0?/, '')}
+                    </ThemedText>
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <ThemedText variant="bold">
+                      Línea {lId.replace(/^lin-0?/, '')}
+                    </ThemedText>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={paleta.textMuted} />
+                </Pressable>
+              ))}
         </View>
       </View>
 
       {/* Acciones del servicio */}
-      <View style={[styles.card, { backgroundColor: paleta.surfaceHighlight, borderColor: paleta.border, marginTop: 12 }]}>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: paleta.surfaceHighlight,
+            borderColor: paleta.border,
+            marginTop: 12,
+          },
+        ]}
+      >
         <ThemedText variant="bold" color={paleta.text}>
           Servicios de la Parada:
         </ThemedText>
@@ -251,6 +341,7 @@ export default function ParadaDetailScreen() {
           />
         </View>
       </View>
+
       {/* Reportes comunitarios de esta parada */}
       <StopReportsList paradaId={parada.id} />
     </ScrollView>

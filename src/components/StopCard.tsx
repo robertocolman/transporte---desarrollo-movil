@@ -72,28 +72,28 @@ export function StopCard({ parada }: StopCardProps) {
         </View>
 
         <View style={styles.rightContainer}>
-        {formattedDistance && (
-          <View
-            style={[
-              styles.distanceBadge,
-              { backgroundColor: `${paleta.primary}15` },
-            ]}
-          >
-          <Ionicons name="location-sharp" size={14} color={paleta.primary} />
-            <ThemedText
-              variant="bold"
-              color={paleta.primary}
-              style={{ marginLeft: 2 }}
+          {formattedDistance && (
+            <View
+              style={[
+                styles.distanceBadge,
+                { backgroundColor: `${paleta.primary}15` },
+              ]}
             >
-              {formattedDistance}
-            </ThemedText>
-          </View>
-        )}
+              <Ionicons name="location-sharp" size={14} color={paleta.primary} />
+              <ThemedText
+                variant="bold"
+                color={paleta.primary}
+                style={{ marginLeft: 2 }}
+              >
+                {formattedDistance}
+              </ThemedText>
+            </View>
+          )}
 
-        <View style={styles.starContainer}>
-          <EstrellaFavorito tipo="parada" id={parada.id} />
+          <View style={styles.starContainer}>
+            <EstrellaFavorito tipo="parada" id={parada.id} />
+          </View>
         </View>
-      </View>
       </View>
 
       <View style={styles.bottomRow}>
@@ -188,8 +188,12 @@ const styles = StyleSheet.create({
     borderTopColor: '#33415525',
   },
   linesRow: {
+    flex: 1,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
+    rowGap: 4,
+    paddingRight: 8,
   },
   linePill: {
     paddingHorizontal: 8,
@@ -209,7 +213,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-
   starContainer: {
     padding: 4,
   },

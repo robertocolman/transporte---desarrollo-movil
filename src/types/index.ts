@@ -1,6 +1,6 @@
 /**
  * Contratos y tipos oficiales de Transporte Público Paraná
- * Extraídos directamente del PRD de la cátedra (pp. 7-11)
+ * Extraídos directamente del PRD de la cátedra (pp. 7-11) y contract/api.ts
  * REGLA: Los nombres de los contratos NO se traducen (DT-01).
  */
 
@@ -47,6 +47,12 @@ export interface Horario {
   sentido: Sentido;
   tipoDeDia: TipoDeDia;
   hora: string; // Formato "HH:MM", hora de tabla
+}
+
+/** Respuesta de GET /feriados (contract/api.ts — decisión D2) */
+export interface Feriado {
+  fecha: string; // Formato "AAAA-MM-DD"
+  nombre: string;
 }
 
 export type Gravedad = 'informativo' | 'desvio' | 'suspension';
@@ -96,13 +102,25 @@ export interface Usuario {
 }
 
 // Sobres de respuesta oficiales de la API de la cátedra
+export interface MetaPaginacion {
+  total: number;
+  pagina: number;
+  porPagina: number;
+}
+
+export interface RespuestaLista<T> {
+  datos: T[];
+  meta: MetaPaginacion;
+}
+
+export interface RespuestaUno<T> {
+  datos: T;
+  meta: null;
+}
+
 export interface ApiSuccessResponse<T> {
   datos: T;
-  meta: {
-    total: number;
-    pagina: number;
-    porPagina: number;
-  };
+  meta: MetaPaginacion | null;
 }
 
 export interface ApiErrorResponse {

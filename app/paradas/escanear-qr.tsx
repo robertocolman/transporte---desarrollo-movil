@@ -80,7 +80,7 @@ export default function EscanearQrScreen() {
         return;
       }
 
-      // 3. Consultamos el servicio
+      // 3. Consultamos la API oficial (o caché local si no hay señal)
       const parada = await stopsService.getStopByQr(data);
 
       if (!parada) {
@@ -95,9 +95,13 @@ export default function EscanearQrScreen() {
       // 4. Si es válida, navegamos directamente al detalle de la parada
       router.replace(`/paradas/${parada.id}`);
     } catch (err: any) {
-      Alert.alert('Error', 'Ocurrió un problema al procesar el código QR.', [
-        { text: 'Aceptar', onPress: () => setScanned(false) },
-      ]);
+      Alert.alert(
+        'Error al verificar QR',
+        err instanceof Error
+          ? err.message
+          : 'Ocurrió un problema al procesar el código QR.',
+        [{ text: 'Aceptar', onPress: () => setScanned(false) }]
+      );
     }
   };
 
