@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -11,8 +11,10 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useTheme } from '@/hooks/use-theme';
 import { linesService } from '@/services/linesService';
-import { Linea } from '@/types';
+import { avisosService } from '@/services/avisosService';
+import { Aviso, Linea } from '@/types';
 import { ThemedText } from '@/components/ThemedText';
+import { Button } from '@/components/Button';
 import { EstrellaFavorito } from '@/components/EstrellaFavorito';
 
 export default function LineasScreen() {
@@ -20,22 +22,60 @@ export default function LineasScreen() {
   const router = useRouter();
 
   const [lineas, setLineas] = useState<Linea[]>([]);
+  const [avisosVigentes, setAvisosVigentes] = useState<Aviso[]>([]);
   const [busqueda, setBusqueda] = useState<string>('');
   const [cargando, setCargando] = useState<boolean>(true);
+  const [refrescando, setRefrescando] = useState<boolean>(false);
+  const [errorMensaje, setErrorMensaje] = useState<string | null>(null);
+
+  const cargarLineas = useCallback(
+    async (forzarRecarga = false) => {
+      try {
+        if (forzarRecarga) {
+          setRefrescando(true);
+        } else {
+          setCargando(true);
+        }
+        setErrorMensaje(null);
+
+        const [resultadoLineas, resultadoAvisos] = await Promise.all([
+          linesService.searchLines(busqueda, forzarRecarga),
+          avisosService.getAvisos().catch(() => [] as Aviso[]),
+        ]);
+
+        setLineas(resultadoLineas);
+        setAvisosVigentes(resultadoAvisos);
+      } catch (err: any) {
+        setErrorMensaje(
+          err instanceof Error
+            ? err.message
+            : 'No pudimos cargar las líneas de colectivos.'
+        );
+      } finally {
+        setCargando(false);
+        setRefrescando(false);
+      }
+    },
+    [busqueda]
+  );
 
   useEffect(() => {
-    async function cargarLineas() {
-      setCargando(true);
-      const resultado = await linesService.searchLines(busqueda);
-      setLineas(resultado);
-      setCargando(false);
-    }
-    cargarLineas();
-  }, [busqueda]);
+    cargarLineas(false);
+  }, [cargarLineas]);
+
+  const getAlertaPrincipalDeLinea = (lineaId: string): Aviso | undefined => {
+    const deLaLinea = avisosVigentes.filter((a) => a.lineaIds.includes(lineaId));
+    return (
+      deLaLinea.find((a) => a.gravedad === 'suspension') ||
+      deLaLinea.find((a) => a.gravedad === 'desvio') ||
+      deLaLinea[0]
+    );
+  };
 
   const renderLinea = ({ item }: { item: Linea }) => {
     const recorridoIda = item.recorridos.find((r) => r.sentido === 'ida');
     const recorridoVuelta = item.recorridos.find((r) => r.sentido === 'vuelta');
+    const alertaActiva = getAlertaPrincipalDeLinea(item.id);
 
     return (
       <Pressable
@@ -43,15 +83,25 @@ export default function LineasScreen() {
           styles.lineCard,
           {
             backgroundColor: paleta.surface,
-            borderColor: paleta.border,
-            opacity: pressed ? 0.85 : 1,
+            borderColor:
+              alertaActiva?.gravedad === 'suspension'
+                ? paleta.danger
+                : alertaActiva?.gravedad === 'desvio'
+                  ? paleta.warning
+                  : paleta.border,
+            opacity: pressed ? 0.85 : item.activa ? 1 : 0.72,
           },
         ]}
         onPress={() => router.push(`/lineas/${item.id}` as any)}
       >
         <View style={styles.cardHeader}>
           {/* Badge con el número y color oficial de la línea */}
-          <View style={[styles.badge, { backgroundColor: item.color }]}>
+          <View
+            style={[
+              styles.badge,
+              { backgroundColor: item.activa ? item.color : paleta.textMuted },
+            ]}
+          >
             <ThemedText variant="bold" color="#FFFFFF" style={styles.badgeText}>
               L{item.numero}
             </ThemedText>
@@ -68,6 +118,83 @@ export default function LineasScreen() {
 
           <EstrellaFavorito tipo="linea" id={item.id} />
         </View>
+
+        {/* Estado inactivo o alerta/desvío vigente visible directamente en la línea (PRD §1 y §4) */}
+        {!item.activa && (
+          <View
+            style={[
+              styles.alertPill,
+              { backgroundColor: paleta.surfaceHighlight, borderColor: paleta.border },
+            ]}
+          >
+            <Ionicons name="pause-circle-outline" size={16} color={paleta.textMuted} />
+            <ThemedText
+              variant="caption"
+              color={paleta.textMuted}
+              style={styles.alertPillText}
+            >
+              Línea actualmente sin servicio activo
+            </ThemedText>
+          </View>
+        )}
+
+        {alertaActiva && (
+          <View
+            style={[
+              styles.alertPill,
+              alertaActiva.gravedad === 'suspension'
+                ? {
+                    backgroundColor: `${paleta.danger}15`,
+                    borderColor: `${paleta.danger}50`,
+                  }
+                : alertaActiva.gravedad === 'desvio'
+                  ? {
+                      backgroundColor: `${paleta.warning}18`,
+                      borderColor: `${paleta.warning}60`,
+                    }
+                  : {
+                      backgroundColor: `${paleta.primary}15`,
+                      borderColor: `${paleta.primary}40`,
+                    },
+            ]}
+          >
+            <Ionicons
+              name={
+                alertaActiva.gravedad === 'suspension'
+                  ? 'alert-circle'
+                  : alertaActiva.gravedad === 'desvio'
+                    ? 'warning'
+                    : 'information-circle'
+              }
+              size={16}
+              color={
+                alertaActiva.gravedad === 'suspension'
+                  ? paleta.danger
+                  : alertaActiva.gravedad === 'desvio'
+                    ? paleta.warning
+                    : paleta.primary
+              }
+            />
+            <ThemedText
+              variant="caption"
+              numberOfLines={1}
+              color={
+                alertaActiva.gravedad === 'suspension'
+                  ? paleta.danger
+                  : alertaActiva.gravedad === 'desvio'
+                    ? paleta.warning
+                    : paleta.primary
+              }
+              style={styles.alertPillText}
+            >
+              {alertaActiva.gravedad === 'desvio'
+                ? `Desvío activo: ${alertaActiva.titulo}`
+                : alertaActiva.gravedad === 'suspension'
+                  ? `Suspensión: ${alertaActiva.titulo}`
+                  : alertaActiva.titulo}
+            </ThemedText>
+          </View>
+        )}
 
         {/* Indicadores de Recorridos */}
         <View style={styles.destinosContainer}>
@@ -91,7 +218,7 @@ export default function LineasScreen() {
 
         <View style={[styles.cardFooter, { borderTopColor: paleta.border }]}>
           <ThemedText variant="caption" color={paleta.primary} style={{ fontWeight: '600' }}>
-            Ver mapa interactivo y paradas
+            Ver mapa interactivo, desvíos y paradas
           </ThemedText>
           <Ionicons name="chevron-forward" size={16} color={paleta.primary} />
         </View>
@@ -102,17 +229,23 @@ export default function LineasScreen() {
   return (
     <View style={[styles.container, { backgroundColor: paleta.background }]}>
       {/* Barra de Búsqueda */}
-      <View style={[styles.searchBox, { backgroundColor: paleta.surface, borderColor: paleta.border }]}>
+      <View
+        style={[
+          styles.searchBox,
+          { backgroundColor: paleta.surface, borderColor: paleta.border },
+        ]}
+      >
         <Ionicons name="search" size={20} color={paleta.textMuted} style={styles.searchIcon} />
         <TextInput
-          placeholder="Buscar por número o destino..."
+          placeholder="Buscar por número, destino o empresa..."
           placeholderTextColor={paleta.textMuted}
           value={busqueda}
           onChangeText={setBusqueda}
           style={[styles.searchInput, { color: paleta.text }]}
+          returnKeyType="search"
         />
         {busqueda.length > 0 && (
-          <Pressable onPress={() => setBusqueda('')}>
+          <Pressable onPress={() => setBusqueda('')} hitSlop={8}>
             <Ionicons name="close-circle" size={20} color={paleta.textMuted} />
           </Pressable>
         )}
@@ -125,18 +258,57 @@ export default function LineasScreen() {
             Cargando líneas urbanas...
           </ThemedText>
         </View>
+      ) : errorMensaje ? (
+        <View style={styles.centerContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color={paleta.danger} />
+          <ThemedText variant="subtitle" style={{ marginTop: 12, textAlign: 'center' }}>
+            No pudimos cargar las líneas
+          </ThemedText>
+          <ThemedText
+            variant="caption"
+            color={paleta.textMuted}
+            style={{ marginTop: 6, textAlign: 'center' }}
+          >
+            {errorMensaje}
+          </ThemedText>
+          <Button
+            title="Reintentar"
+            variant="outline"
+            style={{ marginTop: 16 }}
+            onPress={() => cargarLineas(true)}
+          />
+        </View>
       ) : (
         <FlatList
           data={lineas}
           keyExtractor={(item) => item.id}
           renderItem={renderLinea}
           contentContainerStyle={styles.listContent}
+          refreshing={refrescando}
+          onRefresh={() => cargarLineas(true)}
           ListEmptyComponent={
             <View style={styles.centerContainer}>
               <Ionicons name="bus-outline" size={48} color={paleta.textMuted} />
-              <ThemedText variant="body" color={paleta.textMuted} style={{ marginTop: 12 }}>
-                No se encontraron líneas para "{busqueda}".
+              <ThemedText variant="subtitle" style={{ marginTop: 12, textAlign: 'center' }}>
+                No encontramos líneas
               </ThemedText>
+              <ThemedText
+                variant="caption"
+                color={paleta.textMuted}
+                style={{ marginTop: 6, textAlign: 'center' }}
+              >
+                {busqueda
+                  ? `No hay coincidencias para "${busqueda}".`
+                  : 'No hay líneas registradas en este momento.'}
+              </ThemedText>
+              {busqueda.length > 0 && (
+                <Button
+                  title="Limpiar búsqueda"
+                  variant="secondary"
+                  style={{ marginTop: 16 }}
+                  onPress={() => setBusqueda('')}
+                />
+              )}
             </View>
           }
         />
@@ -202,8 +374,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  alertPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  alertPillText: {
+    flex: 1,
+    fontWeight: '700',
+  },
   destinosContainer: {
-    marginTop: 14,
+    marginTop: 12,
     gap: 6,
   },
   destinoRow: {
@@ -213,6 +399,7 @@ const styles = StyleSheet.create({
   },
   destinoText: {
     fontSize: 13,
+    flex: 1,
   },
   cardFooter: {
     flexDirection: 'row',
