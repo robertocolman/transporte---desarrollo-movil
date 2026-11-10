@@ -35,7 +35,7 @@ export const biometricService = {
       await LocalAuthentication.authenticateAsync({
         promptMessage: 'Ingresar a Transporte Paraná',
         cancelLabel: 'Cancelar',
-        disableDeviceFallback: true,
+        disableDeviceFallback: false,
       });
 
     if (resultado.success) {

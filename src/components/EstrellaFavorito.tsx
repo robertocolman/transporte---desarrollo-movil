@@ -5,7 +5,6 @@ import { Ionicons } from '@react-native-vector-icons/ionicons';
 
 import { useTheme } from '@/hooks/use-theme';
 import { authService } from '@/services/authService';
-import { API_URL } from '@/config/api';
 
 interface Props {
   id: string;
@@ -75,21 +74,7 @@ export function EstrellaFavorito({
     setCargando(true);
 
     try {
-      const metodo = esFavorita ? 'DELETE' : 'PUT';
-
-      const respuesta = await fetch(
-        `${API_URL}/yo/${tipo === 'parada' ? 'paradas' : 'lineas'}-favoritas/${encodeURIComponent(id)}`,
-        {
-          method: metodo,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!respuesta.ok) {
-        throw new Error('No se pudo actualizar el favorito.');
-      }
+      await authService.toggleFavorito(tipo, id, !esFavorita);
 
       setEsFavorita(!esFavorita);
       onFavoritoCambiado?.();

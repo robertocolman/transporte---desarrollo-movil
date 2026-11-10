@@ -126,14 +126,6 @@ export default function ReportarScreen() {
       return;
     }
 
-    if (!fotoUri) {
-      Alert.alert(
-        'Fotografía obligatoria',
-        'Tenés que adjuntar una fotografía para continuar.'
-      );
-      return;
-    }
-
     setEnviando(true);
 
     try {
@@ -147,8 +139,10 @@ export default function ReportarScreen() {
           usuarioId = await obtenerUsuarioReportes();
         }
 
-      // guarda la foto
-      const fotoGuardada = await guardarFotoReporte(fotoUri);
+      // guarda la foto si el usuario adjuntó una
+      const fotoGuardada = fotoUri
+        ? await guardarFotoReporte(fotoUri)
+        : null;
 
       // guarda el reporte
       await crearReporteLocal({
@@ -301,9 +295,9 @@ export default function ReportarScreen() {
         ]}
       />
 
-      {/* foto (obligatoria) */}
+      {/* foto (opcional) */}
       <ThemedText variant="subtitle">
-        4. Adjuntá una fotografía *
+        4. Adjuntá una fotografía (opcional)
       </ThemedText>
 
       <View style={styles.botonesFoto}>

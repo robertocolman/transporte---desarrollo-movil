@@ -11,7 +11,7 @@ export interface ReporteParaEnviar {
   paradaId: string;
   motivo: MotivoDemora;
   comentario: string | null;
-  fotoUri: string;
+  fotoUri: string | null;
   fechaHora: string;
 }
 
@@ -92,8 +92,8 @@ export async function enviarReporteApi(
 
   let fotoUrl = fotoUrlExistente;
 
-  // si todavía no se subió la enviamos a la API
-  if (!fotoUrl) {
+  // si adjuntó foto y todavía no se subió, la enviamos a la API
+  if (!fotoUrl && reporte.fotoUri) {
     fotoUrl = await subirFotoApi(reporte.fotoUri);
 
     // guardamos la URL antes de intentar publicar el reporte
@@ -114,7 +114,7 @@ export async function enviarReporteApi(
       paradaId: reporte.paradaId,
       motivo: reporte.motivo,
       comentario: reporte.comentario,
-      fotoUri: fotoUrl,
+      fotoUri: fotoUrl ?? null,
       fechaHora: reporte.fechaHora,
     }),
     signal: AbortSignal.timeout(4000),

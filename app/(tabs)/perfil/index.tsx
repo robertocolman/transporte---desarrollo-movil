@@ -13,7 +13,6 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { authService } from '@/services/authService';
 import { useTheme } from '@/hooks/use-theme';
-import { API_URL } from '@/config/api';
 import { stopsService } from '@/services/stopsService';
 import { linesService } from '@/services/linesService';
 import { pushNotificationService } from '@/services/pushNotificationService';
@@ -203,20 +202,7 @@ export default function PerfilScreen() {
         return;
       }
 
-      const respuesta = await fetch(`${API_URL}/yo`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          avisosActivos: nuevoValor,
-        }),
-      });
-
-      if (!respuesta.ok) {
-        throw new Error('No se pudo actualizar la preferencia.');
-      }
+      await authService.updateAvisosActivos(nuevoValor);
 
       const usuarioActualizado = await authService.getCurrentUser();
       setUsuario(usuarioActualizado.datos);
@@ -784,19 +770,7 @@ export default function PerfilScreen() {
                 return;
                 }
 
-                const respuesta = await fetch(
-                `${API_URL}/yo/paradas-favoritas/${encodeURIComponent(paradaId)}`,
-                {
-                    method: 'DELETE',
-                    headers: {
-                    Authorization: `Bearer ${token}`,
-                    },
-                }
-                );
-
-                if (!respuesta.ok) {
-                throw new Error('No se pudo quitar la parada.');
-                }
+                await authService.toggleFavorito('parada', paradaId, false);
 
                 const usuarioActualizado = await authService.getCurrentUser();
                 setUsuario(usuarioActualizado.datos);
@@ -826,19 +800,7 @@ export default function PerfilScreen() {
                     return;
                     }
 
-                    const respuesta = await fetch(
-                    `${API_URL}/yo/lineas-favoritas/${encodeURIComponent(lineaId)}`,
-                    {
-                        method: 'DELETE',
-                        headers: {
-                        Authorization: `Bearer ${token}`,
-                        },
-                    }
-                    );
-
-                    if (!respuesta.ok) {
-                    throw new Error('No se pudo quitar la línea.');
-                    }
+                    await authService.toggleFavorito('linea', lineaId, false);
 
                     const usuarioActualizado = await authService.getCurrentUser();
                     setUsuario(usuarioActualizado.datos);

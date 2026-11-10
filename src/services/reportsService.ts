@@ -12,7 +12,7 @@ export interface NuevoReporte {
   usuarioId: string;
   motivo: MotivoDemora;
   comentario: string | null;
-  fotoUri: string;
+  fotoUri: string | null;
 }
 
 const dbPromise = SQLite.openDatabaseAsync('reportes.db');
@@ -30,7 +30,7 @@ async function obtenerDB() {
       usuarioId TEXT NOT NULL,
       motivo TEXT NOT NULL,
       comentario TEXT,
-      fotoUri TEXT NOT NULL,
+      fotoUri TEXT,
       fotoUrlRemota TEXT,
       confirmaciones INTEGER NOT NULL DEFAULT 0,
       fechaHora TEXT NOT NULL,
@@ -108,7 +108,7 @@ export async function crearReporteLocal(
       reporte.usuarioId,
       reporte.motivo,
       reporte.comentario,
-      reporte.fotoUri,
+      reporte.fotoUri ?? '',
       reporte.confirmaciones,
       reporte.fechaHora,
       0,
@@ -143,6 +143,7 @@ export async function listarReportesDeParada(
 
   return filas.map((fila) => ({
     ...fila,
+    fotoUri: fila.fotoUri || null,
     sincronizado: Boolean(fila.sincronizado),
   }));
 }
@@ -180,6 +181,7 @@ export async function listarReportesPendientes():
 
   return filas.map((fila) => ({
     ...fila,
+    fotoUri: fila.fotoUri || null,
     sincronizado: false,
   }));
 }
@@ -267,7 +269,7 @@ export async function sincronizarReportesPendientes(): Promise<void> {
             paradaId: reporte.paradaId,
             motivo: reporte.motivo,
             comentario: reporte.comentario,
-            fotoUri: reporte.fotoUri!,
+            fotoUri: reporte.fotoUri || null,
             fechaHora: reporte.fechaHora,
           },
           fotoUrlExistente ?? undefined,

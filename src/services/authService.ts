@@ -179,5 +179,56 @@ export const authService = {
     return !!token;
   },
 
+  // Agregar o quitar parada/línea favorita desde la capa de servicios
+  toggleFavorito: async (
+    tipo: 'parada' | 'linea',
+    id: string,
+    agregar: boolean
+  ): Promise<void> => {
+    const token = await authService.getToken();
+
+    if (!token) {
+      throw new Error('No hay sesión iniciada');
+    }
+
+    const recurso =
+      tipo === 'parada' ? 'paradas-favoritas' : 'lineas-favoritas';
+
+    const respuesta = await fetch(
+      `${API_URL}/yo/${recurso}/${encodeURIComponent(id)}`,
+      {
+        method: agregar ? 'PUT' : 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!respuesta.ok) {
+      throw new Error('No se pudo actualizar el favorito.');
+    }
+  },
+
+  // Actualizar preferencia de avisos/notificaciones del usuario
+  updateAvisosActivos: async (avisosActivos: boolean): Promise<void> => {
+    const token = await authService.getToken();
+
+    if (!token) {
+      throw new Error('No hay sesión iniciada');
+    }
+
+    const respuesta = await fetch(`${API_URL}/yo`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ avisosActivos }),
+    });
+
+    if (!respuesta.ok) {
+      throw new Error('No se pudo actualizar la preferencia.');
+    }
+  },
 };
 
