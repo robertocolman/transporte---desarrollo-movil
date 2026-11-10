@@ -1,5 +1,5 @@
 const rawApiUrl =
-  process.env.EXPO_PUBLIC_API_URL?.trim() || 'http://192.168.0.5:3000';
+  process.env.EXPO_PUBLIC_API_URL?.trim() || 'http://10.0.2.2:3000';
 
 export const API_URL = rawApiUrl.replace(/\/+$/, '');
 
