@@ -4,8 +4,20 @@ import {
   ApiHttpError,
   fetchApiJson,
   getLocalDb,
+  getSyncTimestamp,
   setSyncTimestamp,
 } from '@/services/localDb';
+
+/**
+ * Resultado de consultar avisos junto con su "frescura":
+ * - desdeCache: true si no hubo respuesta del servidor y se muestra la copia local de SQLite.
+ * - actualizadoEn: instante (ISO) de la última sincronización exitosa con el servidor.
+ */
+export interface AvisosResultado {
+  avisos: Aviso[];
+  desdeCache: boolean;
+  actualizadoEn: string | null;
+}
 
 function normalizeAvisoMedia(aviso: Aviso): Aviso {
   return {
@@ -64,10 +76,10 @@ async function readAvisosFromCache(): Promise<Aviso[]> {
 
 export const avisosService = {
   /**
-   * Obtiene los avisos y desvíos vigentes desde la API oficial (`GET /avisos?estado=vigentes`).
-   * Si no hay señal, devuelve la última copia vigente almacenada en SQLite.
+   * Obtiene los avisos vigentes e informa si la lista proviene del servidor o del caché local,
+   * para poder avisarle al pasajero cuando los datos pueden estar desactualizados.
    */
-  async getAvisos(): Promise<Aviso[]> {
+  async getAvisosConMeta(): Promise<AvisosResultado> {
     try {
       const { payload, serverTimeIso } = await fetchApiJson<
         RespuestaLista<Aviso>
@@ -75,11 +87,19 @@ export const avisosService = {
 
       const normalizados = payload.datos.map(normalizeAvisoMedia);
       await saveAvisosToCache(normalizados, serverTimeIso);
-      return normalizados;
+      return {
+        avisos: normalizados,
+        desdeCache: false,
+        actualizadoEn: serverTimeIso,
+      };
     } catch (err) {
       const cached = await readAvisosFromCache();
       if (cached.length > 0) {
-        return cached;
+        return {
+          avisos: cached,
+          desdeCache: true,
+          actualizadoEn: await getSyncTimestamp('avisos'),
+        };
       }
 
       if (err instanceof ApiHttpError) {
@@ -89,6 +109,15 @@ export const avisosService = {
         'No se pudo conectar con el servidor para consultar los avisos vigentes.'
       );
     }
+  },
+
+  /**
+   * Obtiene los avisos y desvíos vigentes desde la API oficial (`GET /avisos?estado=vigentes`).
+   * Si no hay señal, devuelve la última copia vigente almacenada en SQLite.
+   */
+  async getAvisos(): Promise<Aviso[]> {
+    const { avisos } = await this.getAvisosConMeta();
+    return avisos;
   },
 
   /**

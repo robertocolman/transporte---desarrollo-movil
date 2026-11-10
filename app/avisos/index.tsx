@@ -11,6 +11,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useTheme } from '@/hooks/use-theme';
 import { avisosService } from '@/services/avisosService';
+import { formatRelativeSyncAge } from '@/services/localDb';
 import { Aviso, Gravedad } from '@/types';
 import { ThemedText } from '@/components/ThemedText';
 import { Button } from '@/components/Button';
@@ -59,6 +60,8 @@ export default function AvisosScreen() {
   const [cargando, setCargando] = useState<boolean>(true);
   const [refrescando, setRefrescando] = useState<boolean>(false);
   const [errorMensaje, setErrorMensaje] = useState<string | null>(null);
+  const [desactualizados, setDesactualizados] = useState<boolean>(false);
+  const [ultimaSync, setUltimaSync] = useState<string | null>(null);
 
   const cargarAvisos = useCallback(async (esRefresco = false) => {
     try {
@@ -69,8 +72,10 @@ export default function AvisosScreen() {
       }
       setErrorMensaje(null);
 
-      const data = await avisosService.getAvisos();
-      setAvisos(data);
+      const resultado = await avisosService.getAvisosConMeta();
+      setAvisos(resultado.avisos);
+      setDesactualizados(resultado.desdeCache);
+      setUltimaSync(resultado.actualizadoEn);
     } catch (err: any) {
       setErrorMensaje(
         err instanceof Error
@@ -236,6 +241,39 @@ export default function AvisosScreen() {
               <ThemedText variant="body" color={paleta.textMuted} style={{ marginTop: 4 }}>
                 Desvíos activos, interrupciones de servicio y comunicados de la Dirección de Transporte.
               </ThemedText>
+
+              {/* Indicador de datos desactualizados (copia local sin conexión al servidor) */}
+              {desactualizados && (
+                <View
+                  style={[
+                    styles.staleBanner,
+                    {
+                      backgroundColor: `${paleta.warning}18`,
+                      borderColor: `${paleta.warning}66`,
+                    },
+                  ]}
+                >
+                  <Ionicons name="time-outline" size={18} color={paleta.warning} />
+                  <View style={{ flex: 1, marginLeft: 8 }}>
+                    <ThemedText
+                      variant="bold"
+                      color={paleta.warning}
+                      style={{ fontSize: 13 }}
+                    >
+                      Avisos posiblemente desactualizados
+                    </ThemedText>
+                    <ThemedText
+                      variant="caption"
+                      color={paleta.text}
+                      style={{ marginTop: 2 }}
+                    >
+                      No pudimos conectar con el servidor. Mostramos la última copia
+                      guardada ({formatRelativeSyncAge(ultimaSync)}); los desvíos pueden
+                      haber cambiado. Deslizá hacia abajo para actualizar.
+                    </ThemedText>
+                  </View>
+                </View>
+              )}
             </View>
           }
           ListEmptyComponent={
@@ -270,6 +308,14 @@ const styles = StyleSheet.create({
   },
   headerNotice: {
     marginBottom: 8,
+  },
+  staleBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 12,
   },
   avisoCard: {
     padding: 16,
