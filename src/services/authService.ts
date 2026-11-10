@@ -1,31 +1,56 @@
 import * as SecureStore from 'expo-secure-store';
+import Storage from 'expo-sqlite/kv-store';
 import { API_URL } from '@/config/api';
 import { biometricService } from './biometricService';
-import Storage from 'expo-sqlite/kv-store';
 
 const TOKEN_KEY = 'user_auth_token';
+const TIEMPO_LIMITE_MS = 12000;
+
+async function solicitarApi(url: string, opciones?: RequestInit): Promise<Response> {
+  const controlador = new AbortController();
+  const temporizador = setTimeout(() => controlador.abort(), TIEMPO_LIMITE_MS);
+
+  try {
+    return await fetch(url, { ...opciones, signal: controlador.signal });
+  } catch {
+    if (controlador.signal.aborted) {
+      throw new Error('El servidor tardó demasiado en responder. Volvé a intentarlo.');
+    }
+    throw new Error('No se pudo conectar con la API. Revisá la conexión y que el backend esté iniciado.');
+  } finally {
+    clearTimeout(temporizador);
+  }
+}
+
+async function leerRespuesta(response: Response, mensajeError: string) {
+  let data: any;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error(response.ok
+      ? 'El servidor devolvió una respuesta no válida.'
+      : mensajeError);
+  }
+
+  if (!response.ok) {
+    throw new Error(data?.error?.mensaje || mensajeError);
+  }
+  return data;
+}
 
 export const authService = {
   saveToken: async (token: string): Promise<void> => {
-    // Eliminamos el ID de la cuenta anterior.
     await Storage.removeItem('report_user_id');
-
     await SecureStore.setItemAsync(TOKEN_KEY, token);
     biometricService.desbloquearSesion();
   },
 
   getToken: async (): Promise<string | null> => {
     try {
-      const biometriaActiva =
-        await biometricService.estaActivada();
-
-      if (
-        biometriaActiva &&
-        !biometricService.estaDesbloqueada()
-      ) {
+      const biometriaActiva = await biometricService.estaActivada();
+      if (biometriaActiva && !biometricService.estaDesbloqueada()) {
         return null;
       }
-
       return await SecureStore.getItemAsync(TOKEN_KEY);
     } catch (error) {
       console.error('Error al obtener el token:', error);
@@ -35,189 +60,107 @@ export const authService = {
 
   removeToken: async (): Promise<void> => {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
-
-    // Eliminamos el ID local al cerrar sesión.
     await Storage.removeItem('report_user_id');
-
     await biometricService.limpiarSesion();
   },
 
-  // Iniciar sesion con email y contraseña
   login: async (email: string, password: string) => {
-    const response = await fetch(
-      `${API_URL}/auth/ingreso`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          contrasena: password,
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.error?.mensaje ||
-        'Error al iniciar sesión'
-      );
+    if (!email.trim() || !password) {
+      throw new Error('Completá el correo y la contraseña.');
     }
 
-    if (data.datos?.token) {
-      await biometricService.limpiarSesion();
-      await authService.saveToken(data.datos.token);
+    const response = await solicitarApi(`${API_URL}/auth/ingreso`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim(), contrasena: password }),
+    });
+    const data = await leerRespuesta(response, 'Error al iniciar sesión.');
 
-      try {
-        const respuestaUsuario = await authService.getCurrentUser();
-
-        if (respuestaUsuario.datos?.id) {
-          await Storage.setItem(
-            'report_user_id',
-            respuestaUsuario.datos.id
-          );
-        }
-      } catch (error) {
-        console.warn(
-          'No se pudo guardar el usuario para reportes offline:',
-          error
-        );
-      }
+    if (!data?.datos?.token) {
+      throw new Error('El servidor no devolvió un token de sesión válido.');
     }
 
+    await biometricService.limpiarSesion();
+    await authService.saveToken(data.datos.token);
+
+    try {
+      const respuestaUsuario = await authService.getCurrentUser();
+      if (respuestaUsuario.datos?.id) {
+        await Storage.setItem('report_user_id', respuestaUsuario.datos.id);
+      }
+    } catch (error) {
+      console.warn('No se pudo guardar el usuario para reportes offline:', error);
+    }
     return data;
   },
 
-  // Registrar un nuevo usuario
-  register: async (
-    nombre: string,
-    email: string,
-    password: string
-  ) => {
-    const response = await fetch(
-      `${API_URL}/auth/registro`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          nombre,
-          email,
-          contrasena: password,
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.error?.mensaje ||
-        'Error al registrar usuario'
-      );
+  register: async (nombre: string, email: string, password: string) => {
+    if (!nombre.trim() || !email.trim() || !password) {
+      throw new Error('Completá nombre, correo y contraseña.');
     }
 
-    if (data.datos?.token) {
-      await biometricService.limpiarSesion();
-      await authService.saveToken(data.datos.token);
+    const response = await solicitarApi(`${API_URL}/auth/registro`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre: nombre.trim(), email: email.trim(), contrasena: password }),
+    });
+    const data = await leerRespuesta(response, 'Error al registrar usuario.');
 
-      try {
-        const respuestaUsuario = await authService.getCurrentUser();
-
-        if (respuestaUsuario.datos?.id) {
-          await Storage.setItem(
-            'report_user_id',
-            respuestaUsuario.datos.id
-          );
-        }
-      } catch (error) {
-        console.warn(
-          'No se pudo guardar el usuario para reportes offline:',
-          error
-        );
-      }
+    if (!data?.datos?.token) {
+      throw new Error('La cuenta se creó, pero el servidor no devolvió un token. Iniciá sesión.');
     }
 
+    await biometricService.limpiarSesion();
+    await authService.saveToken(data.datos.token);
+
+    try {
+      const respuestaUsuario = await authService.getCurrentUser();
+      if (respuestaUsuario.datos?.id) {
+        await Storage.setItem('report_user_id', respuestaUsuario.datos.id);
+      }
+    } catch (error) {
+      console.warn('No se pudo guardar el usuario para reportes offline:', error);
+    }
     return data;
   },
-  
-  
-  // Obtener los datos del usuario logueado
+
   getCurrentUser: async () => {
     const token = await authService.getToken();
+    if (!token) throw new Error('No hay sesión iniciada');
 
-    if (!token) {
-      throw new Error('No hay sesión iniciada');
-    }
-
-    const response = await fetch(
-      `${API_URL}/yo`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.error?.mensaje ||
-        'No se pudo obtener el usuario'
-      );
-    }
-
-    return data;
+    const response = await solicitarApi(`${API_URL}/yo`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return leerRespuesta(response, 'No se pudo obtener el usuario.');
   },
+
   tieneSesionGuardada: async (): Promise<boolean> => {
     const token = await SecureStore.getItemAsync(TOKEN_KEY);
     return !!token;
   },
 
-  // Agregar o quitar parada/línea favorita desde la capa de servicios
   toggleFavorito: async (
-    tipo: 'parada' | 'linea',
-    id: string,
-    agregar: boolean
+    tipo: 'parada' | 'linea', id: string, agregar: boolean
   ): Promise<void> => {
     const token = await authService.getToken();
+    if (!token) throw new Error('No hay sesión iniciada');
 
-    if (!token) {
-      throw new Error('No hay sesión iniciada');
-    }
-
-    const recurso =
-      tipo === 'parada' ? 'paradas-favoritas' : 'lineas-favoritas';
-
-    const respuesta = await fetch(
+    const recurso = tipo === 'parada' ? 'paradas-favoritas' : 'lineas-favoritas';
+    const respuesta = await solicitarApi(
       `${API_URL}/yo/${recurso}/${encodeURIComponent(id)}`,
       {
         method: agregar ? 'PUT' : 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
-
-    if (!respuesta.ok) {
-      throw new Error('No se pudo actualizar el favorito.');
-    }
+    if (!respuesta.ok) throw new Error('No se pudo actualizar el favorito.');
   },
 
-  // Actualizar preferencia de avisos/notificaciones del usuario
   updateAvisosActivos: async (avisosActivos: boolean): Promise<void> => {
     const token = await authService.getToken();
+    if (!token) throw new Error('No hay sesión iniciada');
 
-    if (!token) {
-      throw new Error('No hay sesión iniciada');
-    }
-
-    const respuesta = await fetch(`${API_URL}/yo`, {
+    const respuesta = await solicitarApi(`${API_URL}/yo`, {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -225,10 +168,6 @@ export const authService = {
       },
       body: JSON.stringify({ avisosActivos }),
     });
-
-    if (!respuesta.ok) {
-      throw new Error('No se pudo actualizar la preferencia.');
-    }
+    if (!respuesta.ok) throw new Error('No se pudo actualizar la preferencia.');
   },
 };
-

@@ -32,6 +32,8 @@ export default function PerfilScreen() {
 
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [errorPerfil, setErrorPerfil] = useState<string | null>(null);
+  const [reintentoPerfil, setReintentoPerfil] = useState(0);
   const [favoritosAbiertos, setFavoritosAbiertos] = useState(false);
   const [aparienciaAbierta, setAparienciaAbierta] = useState(false);
   const [notificacionesAbiertas, setNotificacionesAbiertas] = useState(false);
@@ -112,81 +114,79 @@ export default function PerfilScreen() {
 
       async function comprobarSesion() {
         setCargando(true);
-
+        setErrorPerfil(null);
         try {
           const token = await authService.getToken();
+          if (!activo) return;
 
           if (!token) {
-            if (activo) {
-              setUsuario(null);
-              setNombresParadas({});
-              setNombresLineas({});
-            }
+            setUsuario(null);
+            setNombresParadas({});
+            setNombresLineas({});
             return;
           }
 
           const respuesta = await authService.getCurrentUser();
+          if (!activo) return;
+          const datos = respuesta.datos as Usuario;
+          setUsuario(datos);
 
-          if (respuesta.datos?.avisosActivos && respuesta.datos?.id) {
-            pushNotificationService.registrar(respuesta.datos.id).catch((error) => {
+          if (datos.avisosActivos && datos.id) {
+            pushNotificationService.registrar(datos.id).catch((error) => {
               console.error('Error al registrar notificaciones push:', error);
             });
           }
 
-            if (activo) {
-            setUsuario(respuesta.datos);
-            }
-
-            const idsParadas = respuesta.datos.paradasFavoritas ?? [];
-
-            const resultados = await Promise.all(
-            idsParadas.map(async (id: string) => {
-                const parada = await stopsService.getStopById(id);
-
-                return [id, parada?.nombre ?? `Parada ${id.replace(/^par-/, '')}`] as const;
-            })
-            );
-
-            if (activo) {
-            setNombresParadas(Object.fromEntries(resultados));
-            }
-
-            const idsLineas = respuesta.datos.lineasFavoritas ?? [];
-            const resultadosLineas = await Promise.all(
-              idsLineas.map(async (id: string) => {
-                const linea = await linesService.getLineById(id);
-                return [
-                  id,
-                  linea ? `Línea ${linea.numero} - ${linea.nombre}` : `Línea ${id.replace(/^lin-/, '')}`,
-                ] as const;
+          // Los nombres son información secundaria: si una línea o parada no
+          // responde, mostramos su identificador y no bloqueamos el perfil.
+          void (async () => {
+            const paradas = await Promise.all(
+              (datos.paradasFavoritas ?? []).map(async (id) => {
+                try {
+                  const parada = await stopsService.getStopById(id);
+                  return [id, parada?.nombre ?? `Parada ${id.replace(/^par-/, '')}`] as const;
+                } catch {
+                  return [id, `Parada ${id.replace(/^par-/, '')}`] as const;
+                }
               })
             );
+            if (activo) setNombresParadas(Object.fromEntries(paradas));
 
-            if (activo) {
-              setNombresLineas(Object.fromEntries(resultadosLineas));
-            }
-          
+            const lineas = await Promise.all(
+              (datos.lineasFavoritas ?? []).map(async (id) => {
+                try {
+                  const linea = await linesService.getLineById(id);
+                  return [id, linea
+                    ? `Línea ${linea.numero} - ${linea.nombre}`
+                    : `Línea ${id.replace(/^lin-/, '')}`] as const;
+                } catch {
+                  return [id, `Línea ${id.replace(/^lin-/, '')}`] as const;
+                }
+              })
+            );
+            if (activo) setNombresLineas(Object.fromEntries(lineas));
+          })().catch((error) => {
+            console.warn('No se pudieron completar los nombres de favoritos:', error);
+          });
         } catch (error) {
-          console.error('Error al consultar la sesión:', error);
-
           if (activo) {
             setUsuario(null);
+            setErrorPerfil(error instanceof Error
+              ? error.message
+              : 'No se pudo cargar el perfil.');
           }
         } finally {
-          if (activo) {
-            setCargando(false);
-          }
+          if (activo) setCargando(false);
         }
       }
 
-      comprobarSesion();
-
+      void comprobarSesion();
       return () => {
         activo = false;
       };
-    }, [])
+    }, [reintentoPerfil])
   );
-  
+
   async function cambiarAvisos() {
     if (!usuario || guardandoAvisos) return;
 
@@ -255,6 +255,24 @@ export default function PerfilScreen() {
         <Text style={{ color: paleta.text, marginTop: 12 }}>
           Cargando perfil...
         </Text>
+      </View>
+    );
+  }
+
+  if (errorPerfil) {
+    return (
+      <View style={[styles.centrado, { backgroundColor: paleta.background }]}>
+        <Text style={[styles.descripcion, { color: paleta.text }]}>
+          {errorPerfil}
+        </Text>
+        <Pressable
+          style={[styles.botonPrincipal, { backgroundColor: paleta.primary }]}
+          onPress={() => setReintentoPerfil((valor) => valor + 1)}
+        >
+          <Text style={[styles.textoBoton, { color: paleta.onPrimary }]}>
+            Reintentar
+          </Text>
+        </Pressable>
       </View>
     );
   }
