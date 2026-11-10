@@ -241,7 +241,7 @@ export function NextArrivalsWidget({ paradaId, nombreParada }: Props) {
 
             return (
               <View
-                key={grupo.lineaId}
+                key={`${grupo.lineaId}-${grupo.sentido}`}
                 style={[
                   styles.groupCard,
                   {
@@ -263,9 +263,29 @@ export function NextArrivalsWidget({ paradaId, nombreParada }: Props) {
                     </ThemedText>
                   </View>
                   <View style={{ flex: 1, marginLeft: 10 }}>
-                    <ThemedText variant="bold" numberOfLines={1}>
-                      {grupo.destino}
-                    </ThemedText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <ThemedText variant="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
+                        {grupo.destino}
+                      </ThemedText>
+                      <View
+                        style={{
+                          paddingHorizontal: 6,
+                          paddingVertical: 1,
+                          borderRadius: 4,
+                          backgroundColor: paleta.surface,
+                          borderWidth: 1,
+                          borderColor: paleta.border,
+                        }}
+                      >
+                        <ThemedText
+                          variant="caption"
+                          color={paleta.textMuted}
+                          style={{ fontSize: 10, fontWeight: '700', textTransform: 'uppercase' }}
+                        >
+                          {grupo.sentido}
+                        </ThemedText>
+                      </View>
+                    </View>
                     <ThemedText variant="caption" color={paleta.textMuted}>
                       {grupo.lineaNombre}
                     </ThemedText>

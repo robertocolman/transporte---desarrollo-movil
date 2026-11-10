@@ -34,6 +34,7 @@ export interface GrupoArribosLinea {
   lineaNombre: string;
   lineaColor: string;
   destino: string;
+  sentido: Sentido;
   arribosHoy: ProximoArribo[];
   arribosManiana: ProximoArribo[];
   sinServicioHastaManiana: boolean;
@@ -155,7 +156,8 @@ async function saveHorariosParadaToCache(
 async function readHorariosParadaFromCache(
   paradaId: string,
   tipoDeDia?: TipoDeDia,
-  lineaId?: string
+  lineaId?: string,
+  sentido?: Sentido
 ): Promise<Horario[]> {
   const db = await getLocalDb();
   let query = 'SELECT * FROM horarios WHERE paradaId = ?';
@@ -168,6 +170,10 @@ async function readHorariosParadaFromCache(
   if (lineaId) {
     query += ' AND lineaId = ?';
     params.push(lineaId);
+  }
+  if (sentido) {
+    query += ' AND sentido = ?';
+    params.push(sentido);
   }
 
   query += ' ORDER BY hora ASC, lineaId ASC, id ASC;';
@@ -316,12 +322,17 @@ export const schedulesService = {
   async getHorariosPorParada(
     paradaId: string,
     tipoDeDia?: TipoDeDia,
-    lineaId?: string
+    lineaId?: string,
+    sentido?: Sentido
   ): Promise<Horario[]> {
     try {
+      let url = `/horarios?paradaId=${encodeURIComponent(paradaId)}&porPagina=5000`;
+      if (sentido) {
+        url += `&sentido=${encodeURIComponent(sentido)}`;
+      }
       const { payload, serverTimeIso } = await fetchApiJson<
         RespuestaLista<Horario>
-      >(`/horarios?paradaId=${encodeURIComponent(paradaId)}&porPagina=5000`);
+      >(url);
 
       await saveHorariosParadaToCache(paradaId, payload.datos, serverTimeIso);
 
@@ -329,14 +340,16 @@ export const schedulesService = {
         .filter(
           (h) =>
             (!tipoDeDia || h.tipoDeDia === tipoDeDia) &&
-            (!lineaId || h.lineaId === lineaId)
+            (!lineaId || h.lineaId === lineaId) &&
+            (!sentido || h.sentido === sentido)
         )
         .sort((a, b) => a.hora.localeCompare(b.hora));
     } catch (err) {
       const cached = await readHorariosParadaFromCache(
         paradaId,
         tipoDeDia,
-        lineaId
+        lineaId,
+        sentido
       );
       if (cached.length > 0) {
         return cached;
@@ -354,6 +367,59 @@ export const schedulesService = {
       throw new Error(
         'Sin conexión a internet y los horarios de esta parada todavía no están descargados en el teléfono.'
       );
+    }
+  },
+
+  /**
+   * Sincroniza y devuelve los horarios de una línea (`GET /horarios?lineaId=...&porPagina=5000`).
+   */
+  async getHorariosPorLinea(
+    lineaId: string,
+    tipoDeDia?: TipoDeDia,
+    sentido?: Sentido
+  ): Promise<Horario[]> {
+    try {
+      let url = `/horarios?lineaId=${encodeURIComponent(lineaId)}&porPagina=5000`;
+      if (sentido) {
+        url += `&sentido=${encodeURIComponent(sentido)}`;
+      }
+      const { payload, serverTimeIso } = await fetchApiJson<
+        RespuestaLista<Horario>
+      >(url);
+
+      const db = await getLocalDb();
+      await db.withTransactionAsync(async () => {
+        for (const h of payload.datos) {
+          await db.runAsync(
+            `INSERT OR REPLACE INTO horarios (id, lineaId, paradaId, sentido, tipoDeDia, hora)
+             VALUES (?, ?, ?, ?, ?, ?);`,
+            [h.id, h.lineaId, h.paradaId, h.sentido, h.tipoDeDia, h.hora]
+          );
+        }
+      });
+      await setSyncTimestamp('horarios', serverTimeIso);
+
+      return payload.datos
+        .filter(
+          (h) =>
+            (!tipoDeDia || h.tipoDeDia === tipoDeDia) &&
+            (!sentido || h.sentido === sentido)
+        )
+        .sort((a, b) => a.hora.localeCompare(b.hora));
+    } catch {
+      const db = await getLocalDb();
+      let query = 'SELECT * FROM horarios WHERE lineaId = ?';
+      const params: string[] = [lineaId];
+      if (tipoDeDia) {
+        query += ' AND tipoDeDia = ?';
+        params.push(tipoDeDia);
+      }
+      if (sentido) {
+        query += ' AND sentido = ?';
+        params.push(sentido);
+      }
+      query += ' ORDER BY hora ASC, paradaId ASC;';
+      return db.getAllAsync<Horario>(query, params);
     }
   },
 
@@ -422,7 +488,8 @@ export const schedulesService = {
     const mapa = new Map<string, GrupoArribosLinea>();
 
     for (const item of arribos) {
-      let grupo = mapa.get(item.lineaId);
+      const clave = `${item.lineaId}_${item.sentido}`;
+      let grupo = mapa.get(clave);
       if (!grupo) {
         grupo = {
           lineaId: item.lineaId,
@@ -430,12 +497,13 @@ export const schedulesService = {
           lineaNombre: item.lineaNombre,
           lineaColor: item.lineaColor,
           destino: item.destino,
+          sentido: item.sentido,
           arribosHoy: [],
           arribosManiana: [],
           sinServicioHastaManiana: false,
           primerServicioManiana: null,
         };
-        mapa.set(item.lineaId, grupo);
+        mapa.set(clave, grupo);
       }
 
       if (item.esManiana) {
@@ -462,7 +530,10 @@ export const schedulesService = {
       if (!Number.isNaN(numA) && !Number.isNaN(numB) && numA !== numB) {
         return numA - numB;
       }
-      return a.lineaNumero.localeCompare(b.lineaNumero);
+      if (a.lineaNumero !== b.lineaNumero) {
+        return a.lineaNumero.localeCompare(b.lineaNumero);
+      }
+      return a.sentido.localeCompare(b.sentido);
     });
   },
 };

@@ -12,14 +12,15 @@ import { useTheme } from '@/hooks/use-theme';
 import { schedulesService } from '@/services/schedulesService';
 import { stopsService } from '@/services/stopsService';
 import { formatRelativeSyncAge } from '@/services/localDb';
-import { Horario, Linea, Parada, TipoDeDia } from '@/types';
+import { Horario, Linea, Parada, Sentido, TipoDeDia } from '@/types';
 import { ThemedText } from '@/components/ThemedText';
 import { Button } from '@/components/Button';
 
 export default function HorariosScreen() {
-  const { id, lineaId } = useLocalSearchParams<{
+  const { id, lineaId, sentido } = useLocalSearchParams<{
     id: string;
     lineaId?: string;
+    sentido?: Sentido;
   }>();
   const { paleta } = useTheme();
 
@@ -30,6 +31,9 @@ export default function HorariosScreen() {
   const [feriadoHoyNombre, setFeriadoHoyNombre] = useState<string | null>(null);
   const [lineaFiltro, setLineaFiltro] = useState<string | null>(
     lineaId ?? null
+  );
+  const [sentidoFiltro, setSentidoFiltro] = useState<Sentido | null>(
+    sentido ?? null
   );
   const [ultimaSync, setUltimaSync] = useState<string | null>(null);
   const [inicializado, setInicializado] = useState<boolean>(false);
@@ -99,7 +103,8 @@ export default function HorariosScreen() {
       const data = await schedulesService.getHorariosPorParada(
         id,
         tipoDia,
-        lineaFiltro || undefined
+        lineaFiltro || undefined,
+        sentidoFiltro || undefined
       );
       const syncIso = await schedulesService.getUltimaSincronizacionHorarios();
 
@@ -115,7 +120,7 @@ export default function HorariosScreen() {
     } finally {
       setCargando(false);
     }
-  }, [id, inicializado, tipoDia, lineaFiltro]);
+  }, [id, inicializado, tipoDia, lineaFiltro, sentidoFiltro]);
 
   useEffect(() => {
     void cargarHorarios();
@@ -245,6 +250,41 @@ export default function HorariosScreen() {
             })}
           </View>
         )}
+
+        {/* Filtro por Sentido (Ida / Vuelta) */}
+        <View style={styles.sentidoFilterRow}>
+          {(['todos', 'ida', 'vuelta'] as const).map((s) => {
+            const activo = s === 'todos' ? !sentidoFiltro : sentidoFiltro === s;
+            const etiqueta =
+              s === 'todos' ? 'Todos los sentidos' : s === 'ida' ? 'Ida' : 'Vuelta';
+            return (
+              <Pressable
+                key={s}
+                style={[
+                  styles.sentidoBtn,
+                  activo
+                    ? {
+                        backgroundColor: paleta.primary,
+                        borderColor: paleta.primary,
+                      }
+                    : {
+                        backgroundColor: paleta.surface,
+                        borderColor: paleta.border,
+                      },
+                ]}
+                onPress={() => setSentidoFiltro(s === 'todos' ? null : s)}
+              >
+                <ThemedText
+                  variant="caption"
+                  color={activo ? '#FFFFFF' : paleta.text}
+                  style={{ fontWeight: '600' }}
+                >
+                  {etiqueta}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       {/* Estados de Carga, Error y Lista/Vacío */}
@@ -320,9 +360,28 @@ export default function HorariosScreen() {
                 </View>
 
                 <View style={{ flex: 1, marginLeft: 12 }}>
-                  <ThemedText variant="bold">
-                    {linea?.nombre || `Línea ${numFallback}`}
-                  </ThemedText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <ThemedText variant="bold">
+                      {linea?.nombre || `Línea ${numFallback}`}
+                    </ThemedText>
+                    <View
+                      style={[
+                        styles.sentidoTag,
+                        {
+                          backgroundColor: paleta.surfaceHighlight,
+                          borderColor: paleta.border,
+                        },
+                      ]}
+                    >
+                      <ThemedText
+                        variant="caption"
+                        color={paleta.textMuted}
+                        style={{ fontSize: 10, fontWeight: '700', textTransform: 'uppercase' }}
+                      >
+                        {item.sentido}
+                      </ThemedText>
+                    </View>
+                  </View>
                   <ThemedText variant="caption" color={paleta.textMuted}>
                     {recorrido?.destino ||
                       `Sentido: ${item.sentido.toUpperCase()}`}
@@ -423,6 +482,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
+  },
+  sentidoFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 10,
+  },
+  sentidoBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  sentidoTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    borderWidth: 1,
   },
   listContent: {
     padding: 16,

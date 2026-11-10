@@ -114,7 +114,7 @@ export const notificationsService = {
     const ahora = new Date();
     const fechaArribo = fechaDeHorario(horaProgramada);
     if (fechaArribo.getTime() <= ahora.getTime()) {
-      throw new Error('El horario de ese colectivo ya pasó.');
+      fechaArribo.setDate(fechaArribo.getDate() + 1);
     }
 
     const fechaAviso = new Date(fechaArribo.getTime() - 10 * 60 * 1000);

@@ -128,7 +128,7 @@ export async function getSyncTimestamp(recurso: string): Promise<string | null> 
 }
 
 export async function getLatestSyncTimestamp(
-  recursos: SyncResourceKey[] = ['paradas', 'lineas', 'horarios', 'feriados']
+  recursos: SyncResourceKey[] = ['paradas', 'lineas', 'avisos', 'horarios', 'feriados']
 ): Promise<string | null> {
   if (recursos.length === 0) return null;
   const db = await getLocalDb();
