@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -24,6 +24,10 @@ interface Props {
   nombreParada: string;
 }
 
+function claveArribo(arribo: ProximoArribo): string {
+  return `${arribo.horarioId}:${arribo.esManiana ? 'maniana' : 'hoy'}`;
+}
+
 const ETIQUETA_TIPO_DIA: Record<TipoDeDia, string> = {
   habil: 'Día hábil',
   sabado: 'Sábado',
@@ -41,6 +45,7 @@ export function NextArrivalsWidget({ paradaId, nombreParada }: Props) {
   const [errorMensaje, setErrorMensaje] = useState<string | null>(null);
   // Guarda el ID real de cada notificación local para poder cancelarla.
   const [recordatorios, setRecordatorios] = useState<Record<string, string>>({});
+  const operacionesEnCurso = useRef(new Set<string>());
 
   const cargarArribos = useCallback(async () => {
     try {
@@ -86,14 +91,15 @@ export function NextArrivalsWidget({ paradaId, nombreParada }: Props) {
           const id = await notificationsService.buscarAvisoArribo(
             arribo.lineaNumero,
             nombreParada,
-            arribo.horaProgramada
+            arribo.horaProgramada,
+            arribo.esManiana
           );
 
-          return [arribo.horarioId, id] as const;
+          return [claveArribo(arribo), id] as const;
         })
       );
 
-      if (montado) {
+      if (montado && operacionesEnCurso.current.size === 0) {
         setRecordatorios(
           Object.fromEntries(
             encontrados.filter(([, id]) => Boolean(id))
@@ -110,14 +116,20 @@ export function NextArrivalsWidget({ paradaId, nombreParada }: Props) {
   }, [arribos, nombreParada]);
 
   const agendarNotificacion = async (arribo: ProximoArribo) => {
-    const idExistente = recordatorios[arribo.horarioId];
+    const clave = claveArribo(arribo);
+    if (operacionesEnCurso.current.has(clave)) return;
+    operacionesEnCurso.current.add(clave);
+    const idExistente = recordatorios[clave];
 
     try {
       if (idExistente) {
-        await notificationsService.cancelarAvisoArribo(idExistente);
+        await notificationsService.cancelarAvisoArribo(
+          idExistente, arribo.lineaNumero, nombreParada,
+          arribo.horaProgramada, arribo.esManiana
+        );
         setRecordatorios((actuales) => {
           const siguiente = { ...actuales };
-          delete siguiente[arribo.horarioId];
+          delete siguiente[clave];
           return siguiente;
         });
         Alert.alert(
@@ -130,13 +142,14 @@ export function NextArrivalsWidget({ paradaId, nombreParada }: Props) {
       const notifId = await notificationsService.programarAvisoArribo(
         arribo.lineaNumero,
         nombreParada,
-        arribo.horaProgramada
+        arribo.horaProgramada,
+        arribo.esManiana
       );
 
       if (notifId) {
         setRecordatorios((actuales) => ({
           ...actuales,
-          [arribo.horarioId]: notifId,
+          [clave]: notifId,
         }));
         Alert.alert(
           'Recordatorio activado',
@@ -155,6 +168,8 @@ export function NextArrivalsWidget({ paradaId, nombreParada }: Props) {
           ? error.message
           : 'Ocurrió un error al programar el recordatorio.'
       );
+    } finally {
+      operacionesEnCurso.current.delete(clave);
     }
   };
 
@@ -304,7 +319,7 @@ export function NextArrivalsWidget({ paradaId, nombreParada }: Props) {
                   {itemsParaMostrar.map((item) => {
                     const esPronto =
                       !item.esManiana && item.minutosRestantes <= 10;
-                    const tieneAlarma = Boolean(recordatorios[item.horarioId]);
+                    const tieneAlarma = Boolean(recordatorios[claveArribo(item)]);
 
                     const textoTiempo = item.esManiana
                       ? `Mañana ${item.horaProgramada} hs`
@@ -314,7 +329,7 @@ export function NextArrivalsWidget({ paradaId, nombreParada }: Props) {
 
                     return (
                       <View
-                        key={item.horarioId}
+                        key={claveArribo(item)}
                         style={[
                           styles.arriboRow,
                           {
