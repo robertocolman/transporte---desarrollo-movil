@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Transporte Paraná",
-    "slug": "transporte-parana",
+    "slug": "paranaunergrupo9",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -20,6 +20,7 @@
       }
     },
     "android": {
+      "package": "com.uner.transporteparana",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#121b28"
@@ -27,8 +28,17 @@
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
-        "CAMERA"
-      ]
+        "CAMERA",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDummyKeyForAndroidManifestConfig"
+        }
+      }
     },
     "plugins": [
       "expo-router",
@@ -53,6 +63,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f3ce7dbc-cf30-422b-aba0-8a4c592b0b87"
+      }
     }
   }
 }
