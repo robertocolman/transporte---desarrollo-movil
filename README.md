@@ -11,23 +11,6 @@ Aplicacion movil desarrollada con React Native y Expo para la gestion y consulta
 
 La aplicacion permite consultar lineas urbanas, recorridos de ida y vuelta, paradas georreferenciadas, horarios de servicio, avisos de desvios por obras, reportes de demoras y gestion de preferencias de usuario.
 
----
-
-## 📱 Descarga de la Aplicación Instalable (APK Android)
-
-Para facilitar la evaluación y prueba directa en dispositivos Android reales sin requerir un entorno de desarrollo local configurado, el proyecto cuenta con un instalador APK compilado y conectado al backend:
-
-👉 **[Descargar ParanaUnerGrupo9.apk (Releases de GitHub)](https://github.com/robertocolman/transporte---desarrollo-movil/releases/latest)**
-
-### 🌐 Backend en la Nube y Estado de Servicios:
-- **API Backend:** Desplegada en la nube con HTTPS seguro en `https://api-transporte-publico-i5y5.onrender.com` (disponible 24/7).
-- **Base de Datos y Storage:** Alojados en Supabase (PostgreSQL con todas las paradas, líneas, horarios y avisos oficiales de Paraná precargados, y bucket S3 para almacenamiento multimedia).
-- **Video Oficial de Tránsito:** Reproducción en vivo en la sección de avisos mediante `expo-video` consumiendo el video real de Paraná alojado en Supabase Storage.
-- **Aclaración sobre la capa de mapa base en el APK:**  
-  En un build standalone (`.apk`), Google Maps nativo para Android requiere registrar una clave de API vinculada a una cuenta de facturación con tarjeta de crédito en Google Cloud Platform (Maps SDK for Android). Dado que para este trabajo práctico académico no se utilizan tarjetas comerciales, el APK dibuja los marcadores de las paradas, líneas y el compass/brújula con normalidad, pero el plano base de calles se renderiza en fondo neutro. La visualización completa del mapa interactivo con sus capas de calles puede apreciarse ejecutando el proyecto en desarrollo mediante **Expo Go** (`npx expo start`), donde Expo provee su propia clave de desarrollo.
-
----
-
 ## Stack Tecnologico
 
 - Framework: React Native con Expo (SDK 57)
@@ -121,3 +104,25 @@ El desarrollo del proyecto se estructura en cinco modulos independientes y desac
    - En un dispositivo fisico: Escanear el codigo QR generado en la terminal desde la app Expo Go.
    - En el emulador de Android: Presionar la tecla `a` en la terminal una vez iniciado el servidor.
    - En la version web: Presionar la tecla `w`.
+
+---
+
+## Descarga e Instalacion de la APK (Android)
+
+Para evaluar y probar directamente la aplicacion en dispositivos Android sin requerir la instalacion de un entorno de desarrollo local, se encuentra disponible el paquete APK precompilado:
+
+- Enlace de descarga directa: [ParanaUnerGrupo9.apk (GitHub Releases)](https://github.com/robertocolman/transporte---desarrollo-movil/releases/latest)
+
+<p align="center">
+  <img src="./assets/qr-apk.png" width="200" alt="Codigo QR de descarga del APK" />
+  <br />
+  <sub>Escanear con la camara del telefono para descargar el instalador APK</sub>
+</p>
+
+### Infraestructura y Servicios en la Nube
+- **API Backend:** Desplegada en la nube con HTTPS en `https://api-transporte-publico-i5y5.onrender.com` (operativa 24/7).
+- **Base de Datos y Almacenamiento:** PostgreSQL y bucket S3 en Supabase, con la totalidad de lineas, paradas, horarios y avisos oficiales precargados.
+- **Reproduccion Multimedia:** La seccion de avisos reproduce video de transito en tiempo real mediante `expo-video` consumiendo el archivo alojado en Supabase Storage.
+- **Nota sobre renderizado de mapa base en APK compilado:**  
+  En un paquete ejecutable final (.apk), la visualizacion de las capas de calles de Google Maps nativo en Android requiere una clave de API asociada a una cuenta de facturacion comercial en Google Cloud Platform (Maps SDK for Android). Conforme a los alcances academicos del trabajo integrador, no se ingresaron tarjetas bancarias de caracter personal. Por este motivo, el instalador APK renderiza correctamente los marcadores de paradas, el trazado de lineas y la brujula, mientras que la capa base de calles se muestra en tono solido. Quienes deseen interactuar con el mapa base completo de Google Maps pueden ejecutar el codigo fuente en modo desarrollo a traves de **Expo Go** (`npx expo start`), donde Expo proporciona sus credenciales de desarrollo.
+
