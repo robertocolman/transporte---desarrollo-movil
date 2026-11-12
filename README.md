@@ -11,6 +11,23 @@ Aplicacion movil desarrollada con React Native y Expo para la gestion y consulta
 
 La aplicacion permite consultar lineas urbanas, recorridos de ida y vuelta, paradas georreferenciadas, horarios de servicio, avisos de desvios por obras, reportes de demoras y gestion de preferencias de usuario.
 
+---
+
+## 📱 Descarga de la Aplicación Instalable (APK Android)
+
+Para facilitar la evaluación y prueba directa en dispositivos Android reales sin requerir un entorno de desarrollo local configurado, el proyecto cuenta con un instalador APK compilado y conectado al backend:
+
+👉 **[Descargar ParanaUnerGrupo9.apk (Releases de GitHub)](https://github.com/robertocolman/transporte---desarrollo-movil/releases/latest)**
+
+### 🌐 Backend en la Nube y Estado de Servicios:
+- **API Backend:** Desplegada en la nube con HTTPS seguro en `https://api-transporte-publico-i5y5.onrender.com` (disponible 24/7).
+- **Base de Datos y Storage:** Alojados en Supabase (PostgreSQL con todas las paradas, líneas, horarios y avisos oficiales de Paraná precargados, y bucket S3 para almacenamiento multimedia).
+- **Video Oficial de Tránsito:** Reproducción en vivo en la sección de avisos mediante `expo-video` consumiendo el video real de Paraná alojado en Supabase Storage.
+- **Aclaración sobre la capa de mapa base en el APK:**  
+  En un build standalone (`.apk`), Google Maps nativo para Android requiere registrar una clave de API vinculada a una cuenta de facturación con tarjeta de crédito en Google Cloud Platform (Maps SDK for Android). Dado que para este trabajo práctico académico no se utilizan tarjetas comerciales, el APK dibuja los marcadores de las paradas, líneas y el compass/brújula con normalidad, pero el plano base de calles se renderiza en fondo neutro. La visualización completa del mapa interactivo con sus capas de calles puede apreciarse ejecutando el proyecto en desarrollo mediante **Expo Go** (`npx expo start`), donde Expo provee su propia clave de desarrollo.
+
+---
+
 ## Stack Tecnologico
 
 - Framework: React Native con Expo (SDK 57)
