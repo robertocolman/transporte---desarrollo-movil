@@ -1,6 +1,4 @@
 
-// FORMULARIO DE REPORTES
-
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -20,17 +18,20 @@ import { ThemedText } from '../../../src/components/ThemedText';
 import { useTheme } from '../../../src/hooks/use-theme';
 import { stopsService } from '../../../src/services/stopsService';
 import { guardarFotoReporte } from '../../../src/services/reportPhotosService';
+
 import {
   crearReporteLocal,
+  obtenerResultadoEnvio,
   sincronizarReportesPendientes,
 } from '../../../src/services/reportsService';
+
 import type { Linea, MotivoDemora } from '../../../src/types';
+
 import {
   guardarUsuarioReportes,
   obtenerUsuarioReportes,
 } from '../../../src/services/reportUserService';
 
-// motivos que puede seleccionar el usuario
 const motivos: { valor: MotivoDemora; texto: string }[] = [
   { valor: 'no_paso', texto: 'El colectivo no pasó' },
   { valor: 'paso_lleno', texto: 'El colectivo pasó lleno' },
@@ -52,7 +53,6 @@ export default function ReportarScreen() {
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
 
-  // lineas que pasan por esta parada
   useEffect(() => {
     async function cargarLineas() {
       try {
@@ -80,7 +80,6 @@ export default function ReportarScreen() {
     void cargarLineas();
   }, [id]);
 
-  // sacar foto
   async function sacarFoto() {
     const permiso = await ImagePicker.requestCameraPermissionsAsync();
 
@@ -102,7 +101,6 @@ export default function ReportarScreen() {
     }
   }
 
-  // elegir foto de la galeria
   async function elegirFoto() {
     const resultado = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -114,7 +112,6 @@ export default function ReportarScreen() {
     }
   }
 
-  // validar y guardar el reporte
   async function enviarReporte() {
     if (enviando) return;
 
@@ -129,51 +126,86 @@ export default function ReportarScreen() {
     setEnviando(true);
 
     try {
+      let usuarioId: string;
 
-        let usuarioId: string;
+      try {
+        // Recuperamos el usuario actual desde la API.
+        usuarioId = await guardarUsuarioReportes();
+      } catch {
+        // Si no hay conexión, usamos su ID guardado.
+        usuarioId = await obtenerUsuarioReportes();
+      }
 
-        try {
-          // obterner usuario desde la api y guardar id para usar sin conexion
-          usuarioId = await guardarUsuarioReportes();
-        } catch (error) {
-          usuarioId = await obtenerUsuarioReportes();
-        }
-
-      // guarda la foto si el usuario adjuntó una
+      // La fotografía es opcional en esta versión.
       const fotoGuardada = fotoUri
         ? await guardarFotoReporte(fotoUri)
         : null;
 
-      // guarda el reporte
-      await crearReporteLocal({
+      // Siempre guardamos primero en SQLite.
+      const reporte = await crearReporteLocal({
         paradaId: id,
         lineaId,
         motivo,
         comentario: comentario.trim() || null,
         fotoUri: fotoGuardada,
-        usuarioId: usuarioId,
+        usuarioId,
       });
 
-      // enviar reportes pendientes a la api
+      // Intentamos publicarlo y comprobamos el resultado.
       await sincronizarReportesPendientes();
 
-      // vibracion al confirmar
+      const resultado = await obtenerResultadoEnvio(reporte.id);
+
+      if (resultado.estado === 'rechazado') {
+        Alert.alert(
+          'No se pudo publicar el reporte',
+          resultado.motivoRechazo ||
+            'El servidor rechazó el reporte.',
+          [
+            {
+              text: 'Aceptar',
+              onPress: () => router.back(),
+            },
+          ]
+        );
+        return;
+      }
+
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Success
       );
 
-      Alert.alert(
-        'Reporte guardado',
-        'Tu reporte se guardó correctamente. Si hay conexión y una sesión activa, se intentará enviarlo al servidor.',
-        [{ text: 'Aceptar', onPress: () => router.back() }]
-      );
-    
+      if (resultado.estado === 'sincronizado') {
+        Alert.alert(
+          'Reporte publicado',
+          'Tu reporte se publicó correctamente.',
+          [
+            {
+              text: 'Aceptar',
+              onPress: () => router.back(),
+            },
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Reporte guardado',
+          'Tu reporte quedó pendiente de sincronización. ' +
+            'Se intentará enviar cuando haya conexión y una sesión activa.',
+          [
+            {
+              text: 'Aceptar',
+              onPress: () => router.back(),
+            },
+          ]
+        );
+      }
     } catch (error) {
       console.error('Error al guardar el reporte:', error);
 
-      const mensaje = error instanceof Error
-        ? error.message
-        : 'No se pudo guardar el reporte. Intentá nuevamente.';
+      const mensaje =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo guardar el reporte. Intentá nuevamente.';
 
       Alert.alert('No se pudo guardar el reporte', mensaje);
     } finally {
@@ -205,7 +237,6 @@ export default function ReportarScreen() {
         Ayudá a otros pasajeros compartiendo lo que pasó.
       </ThemedText>
 
-      {/* selección de la linea */}
       <ThemedText variant="subtitle">
         1. ¿Qué línea querés reportar?
       </ThemedText>
@@ -234,6 +265,7 @@ export default function ReportarScreen() {
               <ThemedText>
                 Línea {linea.numero}
               </ThemedText>
+
               {lineaId === linea.id && (
                 <ThemedText color={paleta.primary}>
                   ✓
@@ -244,7 +276,6 @@ export default function ReportarScreen() {
         </View>
       )}
 
-      {/* selección de motivo */}
       <ThemedText variant="subtitle">
         2. ¿Qué ocurrió?
       </ThemedText>
@@ -266,14 +297,16 @@ export default function ReportarScreen() {
             ]}
           >
             <ThemedText>{opcion.texto}</ThemedText>
+
             {motivo === opcion.valor && (
-              <ThemedText color={paleta.primary}>✓</ThemedText>
+              <ThemedText color={paleta.primary}>
+                ✓
+              </ThemedText>
             )}
           </Pressable>
         ))}
       </View>
 
-      {/* comentario (opcional) */}
       <ThemedText variant="subtitle">
         3. Comentario (opcional)
       </ThemedText>
@@ -295,7 +328,6 @@ export default function ReportarScreen() {
         ]}
       />
 
-      {/* foto (opcional) */}
       <ThemedText variant="subtitle">
         4. Adjuntá una fotografía (opcional)
       </ThemedText>
@@ -303,7 +335,10 @@ export default function ReportarScreen() {
       <View style={styles.botonesFoto}>
         <Pressable
           onPress={sacarFoto}
-          style={[styles.botonFoto, { borderColor: paleta.primary }]}
+          style={[
+            styles.botonFoto,
+            { borderColor: paleta.primary },
+          ]}
         >
           <ThemedText color={paleta.primary}>
             📷 Sacar foto
@@ -312,7 +347,10 @@ export default function ReportarScreen() {
 
         <Pressable
           onPress={elegirFoto}
-          style={[styles.botonFoto, { borderColor: paleta.primary }]}
+          style={[
+            styles.botonFoto,
+            { borderColor: paleta.primary },
+          ]}
         >
           <ThemedText color={paleta.primary}>
             Elegir de galería
@@ -327,7 +365,6 @@ export default function ReportarScreen() {
         />
       )}
 
-      {/* enviar reporte */}
       <Pressable
         onPress={enviarReporte}
         disabled={enviando}

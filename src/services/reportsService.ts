@@ -5,7 +5,6 @@ import * as Network from 'expo-network';
 import { enviarReporteApi, ErrorApi } from './reportsApiService';
 import { obtenerUsuarioReportes } from './reportUserService';
 
-// datos para el reporte
 export interface NuevoReporte {
   lineaId: string;
   paradaId: string;
@@ -17,11 +16,9 @@ export interface NuevoReporte {
 
 const dbPromise = SQLite.openDatabaseAsync('reportes.db');
 
-// tabla
 async function obtenerDB() {
   const db = await dbPromise;
 
-  // crear la tabla si no existe
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS reportes (
       id TEXT PRIMARY KEY NOT NULL,
@@ -35,11 +32,11 @@ async function obtenerDB() {
       confirmaciones INTEGER NOT NULL DEFAULT 0,
       fechaHora TEXT NOT NULL,
       sincronizado INTEGER NOT NULL DEFAULT 0,
-      estadoEnvio TEXT NOT NULL DEFAULT 'pendiente'
+      estadoEnvio TEXT NOT NULL DEFAULT 'pendiente',
+      motivoRechazo TEXT
     );
   `);
 
-  // revisa columnas de tablas existentes
   const columnas = await db.getAllAsync<{ name: string }>(
     'PRAGMA table_info(reportes)'
   );
@@ -66,6 +63,18 @@ async function obtenerDB() {
     `);
   }
 
+  // Guardamos el motivo del rechazo para mostrarlo al usuario.
+  const tieneMotivoRechazo = columnas.some(
+    (columna) => columna.name === 'motivoRechazo'
+  );
+
+  if (!tieneMotivoRechazo) {
+    await db.execAsync(`
+      ALTER TABLE reportes
+      ADD COLUMN motivoRechazo TEXT;
+    `);
+  }
+
   await db.runAsync(`
     UPDATE reportes
     SET estadoEnvio = 'sincronizado'
@@ -76,11 +85,9 @@ async function obtenerDB() {
   return db;
 }
 
-
 export async function crearReporteLocal(
   datos: NuevoReporte
 ): Promise<ReporteDeDemora> {
-
   const db = await obtenerDB();
 
   const reporte: ReporteDeDemora = {
@@ -118,7 +125,6 @@ export async function crearReporteLocal(
   return reporte;
 }
 
-
 export type EstadoEnvio = 'pendiente' | 'sincronizado' | 'rechazado';
 
 export type ReporteLocal = ReporteDeDemora & {
@@ -148,11 +154,9 @@ export async function listarReportesDeParada(
   }));
 }
 
-
 export async function confirmarReporteLocal(
   reporteId: string
 ): Promise<void> {
-
   const db = await obtenerDB();
 
   await db.runAsync(
@@ -165,13 +169,12 @@ export async function confirmarReporteLocal(
 
 export async function listarReportesPendientes():
   Promise<ReporteDeDemora[]> {
-
   const db = await obtenerDB();
 
   const filas = await db.getAllAsync<
-  Omit<ReporteDeDemora, 'sincronizado'> & {
-    sincronizado: number;
-  }
+    Omit<ReporteDeDemora, 'sincronizado'> & {
+      sincronizado: number;
+    }
   >(
     `SELECT * FROM reportes
      WHERE sincronizado = 0
@@ -201,23 +204,53 @@ export async function marcarReporteSincronizado(
 }
 
 export async function marcarReporteRechazado(
-  reporteId: string
+  reporteId: string,
+  motivo: string
 ): Promise<void> {
   const db = await obtenerDB();
 
   await db.runAsync(
     `UPDATE reportes
-     SET estadoEnvio = 'rechazado'
+     SET estadoEnvio = 'rechazado',
+         motivoRechazo = ?
+     WHERE id = ?`,
+    [motivo, reporteId]
+  );
+}
+
+// Permite saber si el reporte se publicó,
+// quedó pendiente o fue rechazado.
+export async function obtenerResultadoEnvio(
+  reporteId: string
+): Promise<{
+  estado: EstadoEnvio;
+  motivoRechazo: string | null;
+}> {
+  const db = await obtenerDB();
+
+  const fila = await db.getFirstAsync<{
+    estadoEnvio: EstadoEnvio;
+    motivoRechazo: string | null;
+  }>(
+    `SELECT estadoEnvio, motivoRechazo
+     FROM reportes
      WHERE id = ?`,
     [reporteId]
   );
+
+  if (!fila) {
+    throw new Error('No se encontró el reporte guardado.');
+  }
+
+  return {
+    estado: fila.estadoEnvio,
+    motivoRechazo: fila.motivoRechazo,
+  };
 }
 
 let sincronizando = false;
 
-
 export async function sincronizarReportesPendientes(): Promise<void> {
-
   if (sincronizando) return;
 
   sincronizando = true;
@@ -225,7 +258,7 @@ export async function sincronizarReportesPendientes(): Promise<void> {
   try {
     const estadoRed = await Network.getNetworkStateAsync();
 
-    // si no hay onternet conservar los reportes pendientes
+    // Sin Internet, conservamos los reportes pendientes.
     if (
       !estadoRed.isConnected ||
       estadoRed.isInternetReachable === false
@@ -233,14 +266,11 @@ export async function sincronizarReportesPendientes(): Promise<void> {
       return;
     }
 
-    
-    // obtener usuario actual
     let usuarioId: string;
 
     try {
       usuarioId = await obtenerUsuarioReportes();
     } catch (error) {
-      // no hay reporte sin sesion valida
       console.warn(
         'No se pueden sincronizar reportes sin una sesión válida.',
         error
@@ -248,18 +278,15 @@ export async function sincronizarReportesPendientes(): Promise<void> {
       return;
     }
 
-    // recuparar solamente los reportes de este usuario
+    // Sincronizamos solamente reportes de la sesión actual.
     const todosPendientes = await listarReportesPendientes();
 
     const pendientes = todosPendientes.filter(
       (reporte) => reporte.usuarioId === usuarioId
     );
 
-
     for (const reporte of pendientes) {
       try {
-        // primero se sube la foto y después se envía el reporte
-        
         const fotoUrlExistente = await obtenerFotoRemota(reporte.id);
 
         await enviarReporteApi(
@@ -282,15 +309,13 @@ export async function sincronizarReportesPendientes(): Promise<void> {
       } catch (error) {
         if (error instanceof ErrorApi) {
           if (error.estado === 401 || error.estado === 403) {
-            // la sesión no es válida o no tiene permisos
-            // conservamos el reporte y no se sincroniza
-            console.warn('Se necesita una sesión válida para sincronizar.');
+            console.warn(
+              'Se necesita una sesión válida para sincronizar.'
+            );
             break;
           }
 
           if (error.estado === 408 || error.estado === 429) {
-            // errores temporales
-            // conservamos el reporte para intentarlo mas adelante
             console.warn(
               `Error temporal al enviar el reporte ${reporte.id}: ${error.message}`
             );
@@ -298,9 +323,11 @@ export async function sincronizarReportesPendientes(): Promise<void> {
           }
 
           if (error.estado >= 400 && error.estado < 500) {
-            // el servidor rechazó el reporte
-            // lo guardamos como rechazado para no reenviarlo automaticamente
-            await marcarReporteRechazado(reporte.id);
+            // Registramos también el mensaje devuelto por la API.
+            await marcarReporteRechazado(
+              reporte.id,
+              error.message
+            );
 
             console.warn(
               `Reporte ${reporte.id} rechazado: ${error.message}`
@@ -308,11 +335,8 @@ export async function sincronizarReportesPendientes(): Promise<void> {
 
             continue;
           }
-
         }
 
-        // problemas de conexión o errores del servidor
-        // conservamos el reporte para reintentarlo
         console.error(
           `No se pudo sincronizar el reporte ${reporte.id}:`,
           error
@@ -322,7 +346,6 @@ export async function sincronizarReportesPendientes(): Promise<void> {
       }
     }
   } finally {
-
     sincronizando = false;
   }
 }
@@ -357,6 +380,3 @@ export async function obtenerFotoRemota(
 
   return resultado?.fotoUrlRemota ?? null;
 }
-
-
-
